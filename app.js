@@ -115,6 +115,8 @@ const els = {
   opportunityForm: document.querySelector("#opportunityForm"),
   opportunityList: document.querySelector("#opportunityList"),
   requestInbox: document.querySelector("#requestInbox"),
+  adminNavLink: document.querySelector("#adminNavLink"),
+  adminSection: document.querySelector("#admin"),
   pendingMembers: document.querySelector("#pendingMembers"),
   profileView: document.querySelector("#profileView"),
   profileLink: document.querySelector("#profileLink"),
@@ -187,6 +189,7 @@ function saveDemoState() {
 
 async function refreshAll() {
   els.logoutButton.classList.toggle("hidden", !currentUser || !supabaseClient);
+  updateAdminVisibility();
   await loadCloudData();
   currentProfile = findCurrentProfile();
   fillProfileForm(currentProfile);
@@ -195,6 +198,17 @@ async function refreshAll() {
   renderRequests();
   renderProfile();
   renderAdmin();
+}
+
+function updateAdminVisibility() {
+  const allowed = isAdmin();
+  els.adminNavLink.classList.toggle("hidden", !allowed);
+  els.adminSection.classList.toggle("hidden", !allowed);
+  els.adminSection.setAttribute("aria-hidden", allowed ? "false" : "true");
+  if (!allowed && window.location.hash === "#admin") {
+    window.location.hash = "members";
+    showToast("管理後台僅限管理員查看");
+  }
 }
 
 async function loadCloudData() {
@@ -313,19 +327,31 @@ async function handleProfileSave(event) {
 
 async function handleOpportunitySave(event) {
   event.preventDefault();
+
+  if (!currentUser) {
+    showToast("請先登入，再發布合作機會");
+    location.hash = "join";
+    return;
+  }
+
+  if (!currentProfile) {
+    showToast("請先建立並儲存你的會員頁，再發布合作機會");
+    location.hash = "join";
+    return;
+  }
+
   const opportunity = {
     title: value("#oppTitle"),
     description: value("#oppDesc"),
     country: value("#oppCountry"),
     budget: value("#oppBudget") || "預算可議",
     contact_method: value("#oppContact"),
-    author_id: currentUser?.id || null,
+    author_id: currentProfile.id,
   };
 
   if (supabaseClient) {
-    if (!currentUser) return showToast("請先登入再發布機會");
     const { error } = await supabaseClient.from("opportunities").insert(opportunity);
-    if (error) return showToast(error.message);
+    if (error) return showToast("發布失敗，請確認你的會員頁已儲存，或稍後再試");
   } else {
     state.opportunities.unshift({ ...opportunity, id: `demo-opp-${Date.now()}`, created_at: new Date().toISOString() });
     saveDemoState();
@@ -564,6 +590,12 @@ function renderProfile() {
 }
 
 function renderAdmin() {
+  if (!isAdmin()) {
+    els.pendingMembers.innerHTML = "";
+    els.systemStatus.innerHTML = "";
+    return;
+  }
+
   const pending = state.members.filter((member) => !member.approved);
   document.querySelector("#statMembers").textContent = state.members.length;
   document.querySelector("#statOpps").textContent = state.opportunities.length;

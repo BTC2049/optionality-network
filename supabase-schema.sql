@@ -90,7 +90,14 @@ using (true);
 drop policy if exists "authenticated users can create opportunities" on public.opportunities;
 create policy "authenticated users can create opportunities"
 on public.opportunities for insert
-with check (auth.uid() = author_id);
+with check (
+  auth.uid() = author_id
+  and exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+  )
+);
 
 drop policy if exists "request participants can read" on public.partnership_requests;
 create policy "request participants can read"
