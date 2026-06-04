@@ -24,7 +24,6 @@
         <a id="adminNavLink" class="hidden" href="#admin">後台</a>
       </nav>
       <div class="account-box">
-        <span id="cloudStatus" class="status-pill">Demo 模式</span>
         <button id="logoutButton" class="button ghost hidden" type="button">登出</button>
       </div>
     </header>
@@ -42,9 +41,9 @@
             <a class="button secondary" href="#members">瀏覽會員</a>
           </div>
           <div class="trust-row">
-            <span><strong>多人資料庫</strong> Supabase Ready</span>
-            <span><strong>公開頁面</strong> /?u=username</span>
-            <span><strong>部署</strong> GitHub Pages 可用</span>
+            <span><strong>會員頁</strong> 展示你的資源</span>
+            <span><strong>探索</strong> 找到合作對象</span>
+            <span><strong>請求</strong> 快速建立連結</span>
           </div>
         </div>
         <div class="network-panel">
@@ -83,9 +82,7 @@
             <p class="eyebrow">登入與會員頁</p>
             <h2>每個人都可以建立自己的加密專業頁面</h2>
           </div>
-          <p class="section-note">
-            接上 Supabase 後，登入、會員資料、機會與合作請求會存在雲端，所有使用者看到的是同一套資料。
-          </p>
+          <p class="section-note">登入後建立你的公開會員頁，讓需要你資源的人更容易找到你。</p>
         </div>
 
         <div class="auth-panel">
@@ -94,7 +91,7 @@
             <button type="submit">Email 登入</button>
             <button id="googleLoginButton" type="button">Google 登入</button>
           </form>
-          <p id="authMessage" class="helper-text">未設定 Supabase 時，網站會以本機 Demo 模式運作。</p>
+          <p id="authMessage" class="helper-text">輸入 Email 後，我們會寄送登入連結。</p>
         </div>
 
         <form id="profileForm" class="signup-form">
@@ -218,7 +215,6 @@
             <p class="eyebrow">Admin</p>
             <h2>管理員審核</h2>
           </div>
-          <p class="section-note">只有 `config.js` 裡列為管理員的 Email 才能審核會員。</p>
         </div>
         <div class="admin-grid">
           <article><strong id="statMembers">0</strong><span>會員</span></article>
@@ -230,10 +226,6 @@
           <article>
             <h3>待審核會員</h3>
             <div id="pendingMembers" class="admin-list"></div>
-          </article>
-          <article>
-            <h3>系統狀態</h3>
-            <div id="systemStatus" class="admin-list"></div>
           </article>
         </div>
       </section>

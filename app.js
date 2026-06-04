@@ -103,7 +103,6 @@ let currentProfile = null;
 let activeFilter = "all";
 
 const els = {
-  cloudStatus: document.querySelector("#cloudStatus"),
   logoutButton: document.querySelector("#logoutButton"),
   loginForm: document.querySelector("#loginForm"),
   loginEmail: document.querySelector("#loginEmail"),
@@ -120,7 +119,6 @@ const els = {
   pendingMembers: document.querySelector("#pendingMembers"),
   profileView: document.querySelector("#profileView"),
   profileLink: document.querySelector("#profileLink"),
-  systemStatus: document.querySelector("#systemStatus"),
   toast: document.querySelector("#toast"),
 };
 
@@ -160,9 +158,7 @@ function wireEvents() {
 }
 
 async function initCloudMode() {
-  els.cloudStatus.textContent = "雲端模式";
-  els.cloudStatus.classList.add("online");
-  els.authMessage.textContent = "Supabase 已連線。Email 登入會寄出 magic link，Google 登入需在 Supabase Auth 開啟 Google Provider。";
+  els.authMessage.textContent = "輸入 Email 後，我們會寄送登入連結。";
 
   const { data } = await supabaseClient.auth.getSession();
   currentUser = data.session?.user || null;
@@ -173,8 +169,7 @@ async function initCloudMode() {
 }
 
 function initDemoMode() {
-  els.cloudStatus.textContent = "Demo 模式";
-  els.authMessage.textContent = "尚未設定 Supabase。你仍可操作 Demo，但資料只存在這台瀏覽器。";
+  els.authMessage.textContent = "輸入 Email 後即可開始建立你的會員頁。";
   currentUser = { id: "demo-user", email: "demo@optionality.network" };
 }
 
@@ -246,7 +241,7 @@ async function handleEmailLogin(event) {
   if (!email) return showToast("請輸入 Email");
   if (!supabaseClient) {
     currentUser = { id: "demo-user", email };
-    showToast("Demo 模式已登入");
+    showToast("已登入，可以開始建立會員頁");
     await refreshAll();
     return;
   }
@@ -259,7 +254,7 @@ async function handleEmailLogin(event) {
 
 async function handleGoogleLogin() {
   if (!supabaseClient) {
-    showToast("Demo 模式不需要 Google 登入");
+    showToast("目前請先使用 Email 登入");
     return;
   }
   await supabaseClient.auth.signInWithOAuth({
@@ -320,7 +315,7 @@ async function handleProfileSave(event) {
     saveDemoState();
   }
 
-  showToast(supabaseClient ? "會員頁已儲存，等待管理員審核後會出現在探索頁" : "Demo 會員頁已儲存");
+  showToast(supabaseClient ? "會員頁已儲存，審核後會出現在探索頁" : "會員頁已儲存");
   await refreshAll();
   location.hash = "profile";
 }
@@ -591,8 +586,7 @@ function renderProfile() {
 
 function renderAdmin() {
   if (!isAdmin()) {
-    els.pendingMembers.innerHTML = "";
-    els.systemStatus.innerHTML = "";
+  els.pendingMembers.innerHTML = "";
     return;
   }
 
@@ -614,10 +608,6 @@ function renderAdmin() {
         .join("")
     : '<p class="empty-text">目前沒有待審核會員。</p>';
 
-  els.systemStatus.innerHTML = `
-    <div class="admin-item"><span>資料模式</span><strong>${supabaseClient ? "Supabase 雲端" : "本機 Demo"}</strong></div>
-    <div class="admin-item"><span>登入狀態</span><strong>${currentUser?.email || "未登入"}</strong></div>
-    <div class="admin-item"><span>管理員</span><strong>${isAdmin() ? "是" : "否"}</strong></div>`;
 }
 
 function fillProfileForm(profile) {
