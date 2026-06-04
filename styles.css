@@ -87,6 +87,35 @@ nav {
   font-weight: 600;
 }
 
+.account-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.status-pill.online {
+  border-color: rgba(13, 139, 114, 0.32);
+  color: var(--green);
+  background: #f1fbf8;
+}
+
+.hidden {
+  display: none !important;
+}
+
 .nav-cta,
 .button {
   display: inline-flex;
@@ -450,6 +479,30 @@ h1 {
   background: var(--soft);
 }
 
+.auth-panel {
+  display: grid;
+  gap: 8px;
+  max-width: 1040px;
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.auth-inline {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+  gap: 10px;
+}
+
+.helper-text {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .signup-form {
   display: grid;
   gap: 18px;
@@ -525,6 +578,28 @@ textarea {
 
 .directory {
   background: #fff;
+}
+
+.profile-section {
+  background: #fff;
+}
+
+.profile-view {
+  max-width: 860px;
+}
+
+.profile-card {
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.05);
+}
+
+.profile-card h4 {
+  margin: 4px 0 0;
 }
 
 .search-shell {
@@ -821,6 +896,11 @@ footer strong {
     padding-bottom: 4px;
   }
 
+  .account-box {
+    width: 100%;
+    justify-content: space-between;
+  }
+
   .nav-cta {
     display: none;
   }
@@ -848,6 +928,10 @@ footer strong {
 
   .match-row {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .auth-inline {
+    grid-template-columns: 1fr;
   }
 }
 
