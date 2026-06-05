@@ -29,7 +29,6 @@ const seed = {
       twitter: "@minakol",
       resources_have: ["Telegram 社群", "Twitter/X 受眾", "KOL 人脈"],
       resources_need: ["交易所合作", "影片剪輯"],
-      approved: true,
       profile_views: 428,
       connections: 76,
       completed_partnerships: 18,
@@ -48,7 +47,6 @@ const seed = {
       twitter: "@ryanbd",
       resources_have: ["交易所資源", "聯盟推廣人脈", "項目方資源"],
       resources_need: ["Telegram 社群", "KOL 推廣"],
-      approved: true,
       profile_views: 312,
       connections: 54,
       completed_partnerships: 9,
@@ -67,7 +65,6 @@ const seed = {
       twitter: "@jadeai",
       resources_have: ["AI 自動化", "客服支援", "搜尋引擎優化"],
       resources_need: ["項目合作", "媒體曝光"],
-      approved: true,
       profile_views: 219,
       connections: 41,
       completed_partnerships: 7,
@@ -83,6 +80,7 @@ const seed = {
       country: "台灣",
       budget: "US$500-2,000",
       contact_method: "Telegram @opnetwork",
+      status: "active",
       created_at: new Date().toISOString(),
     },
     {
@@ -93,6 +91,7 @@ const seed = {
       country: "亞洲",
       budget: "可議",
       contact_method: "Twitter/X @growthbd",
+      status: "active",
       created_at: new Date().toISOString(),
     },
   ],
@@ -119,7 +118,6 @@ const els = {
   requestInbox: document.querySelector("#requestInbox"),
   adminNavLink: document.querySelector("#adminNavLink"),
   adminSection: document.querySelector("#admin"),
-  pendingMembers: document.querySelector("#pendingMembers"),
   profileView: document.querySelector("#profileView"),
   profileLink: document.querySelector("#profileLink"),
   toast: document.querySelector("#toast"),
@@ -302,7 +300,6 @@ async function handleProfileSave(event) {
     twitter: value("#twitter"),
     resources_have: selectedTags("have"),
     resources_need: selectedTags("need"),
-    approved: currentProfile?.approved || false,
   };
 
   if (!profile.username || !profile.full_name || !profile.country) return showToast("請填姓名、Username 和地區");
@@ -313,13 +310,13 @@ async function handleProfileSave(event) {
     if (error) return showToast("會員頁儲存失敗，請確認 Username 沒有重複");
   } else {
     const index = state.members.findIndex((member) => member.id === profile.id);
-    const demoProfile = { ...profile, approved: true, profile_views: 0, connections: 0, completed_partnerships: 0 };
+    const demoProfile = { ...profile, profile_views: 0, connections: 0, completed_partnerships: 0 };
     if (index >= 0) state.members[index] = { ...state.members[index], ...demoProfile };
     else state.members.unshift(demoProfile);
     saveDemoState();
   }
 
-  showToast(supabaseClient ? "會員頁已儲存，審核後會出現在探索頁" : "會員頁已儲存");
+  showToast("會員頁已儲存");
   await refreshAll();
   await runPendingIntent();
   location.hash = "profile";
@@ -347,17 +344,40 @@ async function handleOpportunitySave(event) {
 }
 
 async function saveOpportunity(opportunity) {
+  const count = await getActiveOpportunityCount();
+  if (count >= 3) {
+    showToast("你已經有 3 篇有效需求，請先撤銷一篇再發布新的");
+    location.hash = "opportunities";
+    return;
+  }
+
+  const nextOpportunity = { ...opportunity, status: "active" };
+
   if (supabaseClient) {
-    const { error } = await supabaseClient.from("opportunities").insert(opportunity);
+    const { error } = await supabaseClient.from("opportunities").insert(nextOpportunity);
     if (error) return showToast("發布失敗，請確認會員頁已儲存，或稍後再試");
   } else {
-    state.opportunities.unshift({ ...opportunity, id: `demo-opp-${Date.now()}`, created_at: new Date().toISOString() });
+    state.opportunities.unshift({ ...nextOpportunity, id: `demo-opp-${Date.now()}`, created_at: new Date().toISOString() });
     saveDemoState();
   }
 
   showToast("需求已發布");
   pendingIntent = null;
   await refreshAll();
+}
+
+async function getActiveOpportunityCount() {
+  if (!currentUser) return 0;
+  if (supabaseClient) {
+    const { count, error } = await supabaseClient
+      .from("opportunities")
+      .select("id", { count: "exact", head: true })
+      .eq("author_id", currentUser.id)
+      .eq("status", "active");
+    if (error) return 3;
+    return count || 0;
+  }
+  return state.opportunities.filter((item) => item.author_id === currentUser.id && item.status !== "cancelled").length;
 }
 
 async function handleDocumentClick(event) {
@@ -388,8 +408,8 @@ async function handleDocumentClick(event) {
     return;
   }
 
-  const approveButton = event.target.closest("[data-approve]");
-  if (approveButton) await approveProfile(approveButton.dataset.approve);
+  const cancelOppButton = event.target.closest("[data-cancel-opportunity]");
+  if (cancelOppButton) await cancelOpportunity(cancelOppButton.dataset.cancelOpportunity);
 }
 
 async function createRequest(receiverId) {
@@ -448,17 +468,20 @@ async function updateRequest(id, action) {
   await refreshAll();
 }
 
-async function approveProfile(id) {
-  if (!isAdmin() && supabaseClient) return showToast("管理後台僅限管理員使用");
+async function cancelOpportunity(id) {
+  const opportunity = state.opportunities.find((item) => item.id === id);
+  if (!opportunity) return;
+  if (opportunity.author_id !== currentUser?.id && !isAdmin()) return showToast("只能撤銷你自己發布的需求");
+
   if (supabaseClient) {
-    const { error } = await supabaseClient.from("profiles").update({ approved: true }).eq("id", id);
-    if (error) return showToast("審核失敗，請稍後再試");
+    const { error } = await supabaseClient.from("opportunities").update({ status: "cancelled" }).eq("id", id);
+    if (error) return showToast("撤銷失敗，請稍後再試");
   } else {
-    const member = state.members.find((item) => item.id === id);
-    if (member) member.approved = true;
+    opportunity.status = "cancelled";
     saveDemoState();
   }
-  showToast("會員已審核通過");
+
+  showToast("需求已撤銷，可以再發布新的需求");
   await refreshAll();
 }
 
@@ -497,7 +520,6 @@ async function runPendingIntent() {
 function renderMembers() {
   const query = els.memberSearch.value.trim().toLowerCase();
   const visible = state.members
-    .filter((member) => member.approved || member.id === currentUser?.id || isAdmin())
     .filter((member) => {
       const haystack = [
         member.full_name,
@@ -525,7 +547,7 @@ function memberCard(member) {
         <span class="avatar">${initials(member.full_name)}</span>
         <div>
           <h3>${escapeHtml(member.full_name)}</h3>
-          <small>${escapeHtml(member.title)} · ${escapeHtml(member.country)} ${member.approved ? "" : "· 待審核"}</small>
+          <small>${escapeHtml(member.title)} · ${escapeHtml(member.country)}</small>
         </div>
       </div>
       <p>${escapeHtml(member.bio || "這位會員尚未填寫簡介。")}</p>
@@ -544,15 +566,16 @@ function memberCard(member) {
 }
 
 function renderOpportunities() {
-  els.opportunityList.innerHTML = state.opportunities.length
-    ? state.opportunities
+  const visible = state.opportunities.filter((item) => item.status !== "cancelled" || item.author_id === currentUser?.id || isAdmin());
+  els.opportunityList.innerHTML = visible.length
+    ? visible
         .map(
           (item) => `
       <article class="opportunity-card">
         <header>
           <div>
             <h3>${escapeHtml(item.title)}</h3>
-            <small>${escapeHtml(item.country || "遠端")} · ${dateText(item.created_at)}</small>
+            <small>${escapeHtml(item.country || "遠端")} · ${dateText(item.created_at)}${item.status === "cancelled" ? " · 已撤銷" : ""}</small>
           </div>
           <span class="budget">${escapeHtml(item.budget || "預算可議")}</span>
         </header>
@@ -560,7 +583,14 @@ function renderOpportunities() {
         <div class="member-meta">
           <span>${escapeHtml(item.contact_method || "站內合作請求")}</span>
         </div>
-        <button class="button secondary" type="button" data-opportunity="${item.id}">我想合作</button>
+        <div class="row-actions">
+          ${item.status === "cancelled" ? "" : `<button class="button secondary" type="button" data-opportunity="${item.id}">我想合作</button>`}
+          ${
+            item.author_id === currentUser?.id && item.status !== "cancelled"
+              ? `<button class="button ghost" type="button" data-cancel-opportunity="${item.id}">撤銷需求</button>`
+              : ""
+          }
+        </div>
       </article>`
         )
         .join("")
@@ -615,7 +645,7 @@ function renderProfile() {
         <span class="avatar">${initials(profile.full_name)}</span>
         <div>
           <h3>${escapeHtml(profile.full_name)}</h3>
-          <small>${escapeHtml(profile.title)} · ${escapeHtml(profile.country)} ${profile.approved ? "· 已審核" : "· 待審核"}</small>
+          <small>${escapeHtml(profile.title)} · ${escapeHtml(profile.country)}</small>
         </div>
       </div>
       <p>${escapeHtml(profile.bio || "這位會員尚未填寫簡介。")}</p>
@@ -633,27 +663,13 @@ function renderProfile() {
 
 function renderAdmin() {
   if (!isAdmin()) {
-    els.pendingMembers.innerHTML = "";
     return;
   }
 
-  const pending = state.members.filter((member) => !member.approved);
   document.querySelector("#statMembers").textContent = state.members.length;
   document.querySelector("#statOpps").textContent = state.opportunities.length;
   document.querySelector("#statRequests").textContent = state.requests.length;
-  document.querySelector("#statPending").textContent = pending.length;
-
-  els.pendingMembers.innerHTML = pending.length
-    ? pending
-        .map(
-          (member) => `
-      <div class="admin-item">
-        <span>${escapeHtml(member.full_name)} · ${escapeHtml(member.title)}</span>
-        <button type="button" data-approve="${member.id}">通過</button>
-      </div>`
-        )
-        .join("")
-    : '<p class="empty-text">目前沒有待審核會員。</p>';
+  document.querySelector("#statActiveOpps").textContent = state.opportunities.filter((item) => item.status !== "cancelled").length;
 }
 
 function fillProfileForm(profile) {

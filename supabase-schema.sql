@@ -14,7 +14,6 @@ create table if not exists public.profiles (
   website text,
   resources_have text[] default array[]::text[],
   resources_need text[] default array[]::text[],
-  approved boolean default false,
   profile_views integer default 0,
   connections integer default 0,
   completed_partnerships integer default 0,
@@ -31,6 +30,7 @@ create table if not exists public.opportunities (
   country text,
   budget text,
   contact_method text,
+  status text default 'active' check (status in ('active', 'cancelled')),
   created_at timestamptz default now()
 );
 
@@ -66,10 +66,21 @@ as $$
   );
 $$;
 
+alter table public.opportunities
+add column if not exists status text default 'active';
+
+alter table public.opportunities
+drop constraint if exists opportunities_status_check;
+
+alter table public.opportunities
+add constraint opportunities_status_check
+check (status in ('active', 'cancelled'));
+
 drop policy if exists "approved profiles are public" on public.profiles;
-create policy "approved profiles are public"
+drop policy if exists "profiles are public" on public.profiles;
+create policy "profiles are public"
 on public.profiles for select
-using (approved = true or auth.uid() = id or public.is_admin());
+using (true);
 
 drop policy if exists "users can insert own profile" on public.profiles;
 create policy "users can insert own profile"
@@ -77,10 +88,11 @@ on public.profiles for insert
 with check (auth.uid() = id);
 
 drop policy if exists "users can update own profile or admins approve" on public.profiles;
-create policy "users can update own profile or admins approve"
+drop policy if exists "users can update own profile" on public.profiles;
+create policy "users can update own profile"
 on public.profiles for update
-using (auth.uid() = id or public.is_admin())
-with check (auth.uid() = id or public.is_admin());
+using (auth.uid() = id)
+with check (auth.uid() = id);
 
 drop policy if exists "opportunities are public" on public.opportunities;
 create policy "opportunities are public"
@@ -98,6 +110,12 @@ with check (
     where profiles.id = auth.uid()
   )
 );
+
+drop policy if exists "owners can update own opportunities" on public.opportunities;
+create policy "owners can update own opportunities"
+on public.opportunities for update
+using (auth.uid() = author_id)
+with check (auth.uid() = author_id);
 
 drop policy if exists "request participants can read" on public.partnership_requests;
 create policy "request participants can read"
