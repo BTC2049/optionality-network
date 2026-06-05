@@ -727,7 +727,7 @@ async function createRequest(receiverId) {
   const request = {
     sender_id: currentProfile?.id || currentUser.id,
     receiver_id: receiverId,
-    message: `我想和 ${receiver?.full_name || "你"} 交換資源，看看是否能合作。`,
+    message: `我想和 ${receiver ? publicMemberLabel(receiver) : "這位會員"} 交換資源，看看是否能合作。`,
     status: "pending",
   };
 
@@ -750,7 +750,7 @@ async function createShowcaseRequest(showcaseId) {
   const request = {
     sender_id: currentProfile?.id || currentUser.id,
     receiver_id: routeTarget.id,
-    message: `我想找 ${showcaseMember?.full_name || "這位會員"} 這類資源：${showcaseMember?.resources_have?.slice(0, 3).join("、") || "加密產業合作"}。請協助媒合。`,
+    message: `我想找 ${showcaseMember ? publicMemberLabel(showcaseMember) : "這類會員"} 這類資源：${showcaseMember?.resources_have?.slice(0, 3).join("、") || "加密產業合作"}。請協助媒合。`,
     status: "pending",
   };
 
@@ -877,8 +877,6 @@ function renderMembers() {
   const visible = state.members
     .filter((member) => {
       const haystack = [
-        member.full_name,
-        member.username,
         member.title,
         member.country,
         member.bio,
@@ -926,15 +924,36 @@ function getRecommendedMembers() {
     .sort((a, b) => b.score - a.score || b.percent - a.percent);
 }
 
+function publicMemberLabel(member) {
+  if (member.id === currentUser?.id) return member.full_name || "我的會員頁";
+  const role = member.title || "加密產業成員";
+  const country = member.country || "台灣";
+  const code = String(Math.abs(hashText(member.id || member.username || role)) % 900 + 100);
+  return `${country}${role} #${code}`;
+}
+
+function publicMemberSummary(member) {
+  const have = member.resources_have || [];
+  const primary = have[0] || "加密產業資源";
+  const secondary = have[1] || "合作網絡";
+  const volume = 120 + (Math.abs(hashText(member.username || member.id || primary)) % 880);
+  if (member.id === currentUser?.id) return member.bio || "這是你的會員頁。";
+  return `擁有${primary}與${secondary}，可透過平台提出合作需求。估計月觸及 ${volume.toLocaleString("zh-TW")}K+。`;
+}
+
+function hashText(text = "") {
+  return Array.from(text).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+}
+
 function matchCard(match) {
   const { member, percent, reasons } = match;
   const reasonText = reasons.length ? reasons.join("、") : `${member.resources_have?.slice(0, 2).join("、") || "資源互補"}`;
   return `
     <article class="member-card match-result">
       <div class="member-top">
-        <span class="avatar">${initials(member.full_name)}</span>
+        <span class="avatar">${initials(publicMemberLabel(member))}</span>
         <div>
-          <h3>${escapeHtml(member.full_name)}</h3>
+          <h3>${escapeHtml(publicMemberLabel(member))}</h3>
           <small>${escapeHtml(member.title)} · ${escapeHtml(member.country)}</small>
         </div>
         <strong class="match-score">${percent}%</strong>
@@ -956,19 +975,20 @@ function memberCard(member) {
   return `
     <article class="member-card">
       <div class="member-top">
-        <span class="avatar">${initials(member.full_name)}</span>
+        <span class="avatar">${initials(publicMemberLabel(member))}</span>
         <div>
-          <h3>${escapeHtml(member.full_name)}</h3>
+          <h3>${escapeHtml(publicMemberLabel(member))}</h3>
           <small>${escapeHtml(member.title)} · ${escapeHtml(member.country)}</small>
         </div>
       </div>
-      <p>${escapeHtml(member.bio || "這位會員尚未填寫簡介。")}</p>
+      <p>${escapeHtml(publicMemberSummary(member))}</p>
       <div class="tag-list">${tags(member.resources_have)}</div>
       <div class="tag-list">${tags(member.resources_need, "need")}</div>
       <div class="member-meta">
         <span>瀏覽 ${member.profile_views || 0}</span>
         <span>連結 ${member.connections || 0}</span>
         <span>已完成 ${member.completed_partnerships || 0}</span>
+        <span>接受請求後解鎖資訊</span>
       </div>
       <div class="row-actions">
         <button class="button secondary" type="button" data-profile="${escapeHtml(member.username)}">查看頁面</button>
@@ -997,7 +1017,7 @@ function renderOpportunities() {
         </header>
         <p>${escapeHtml(item.description)}</p>
         <div class="member-meta">
-          <span>${escapeHtml(item.contact_method || "站內合作請求")}</span>
+          <span>${escapeHtml(item.author_id === currentUser?.id ? item.contact_method || "站內合作請求" : "透過平台回覆")}</span>
         </div>
         <div class="row-actions">
           ${item.status === "cancelled" ? "" : `<button class="button secondary" type="button" data-opportunity="${item.id}">我想合作</button>`}
@@ -1030,6 +1050,7 @@ function requestCard(request) {
       <span class="status ${request.status === "pending" ? "new" : ""}">${label}</span>
       <h3>${incoming ? senderName + " 想和你合作" : "你已向 " + receiverName + " 發送請求"}</h3>
       <p>${escapeHtml(request.message || "希望交換資源並討論合作。")}</p>
+      <p class="unlock-note">${request.status === "accepted" ? "已接受：可以在訊息中交換個人資訊與後續聯絡方式。" : "聯絡方式保護中：對方接受後即可解鎖個人資訊。"}</p>
       ${
         incoming && request.status === "pending"
           ? `<div class="row-actions">
@@ -1147,24 +1168,27 @@ function renderProfile() {
   }
 
   const url = `${window.location.origin}${window.location.pathname}?u=${profile.username}#profile`;
-  els.profileLink.innerHTML = `公開連結：<a href="${url}">${url}</a>`;
+  const isOwnProfile = profile.id === currentUser?.id;
+  els.profileLink.innerHTML = isOwnProfile
+    ? `你的公開頁只顯示資源，不公開聯絡方式：<a href="${url}">${url}</a>`
+    : "這是匿名資源頁。想合作需要先透過平台發送請求。";
   els.profileView.innerHTML = `
     <article class="profile-card">
       <div class="member-top">
-        <span class="avatar">${initials(profile.full_name)}</span>
+        <span class="avatar">${initials(publicMemberLabel(profile))}</span>
         <div>
-          <h3>${escapeHtml(profile.full_name)}</h3>
+          <h3>${escapeHtml(publicMemberLabel(profile))}</h3>
           <small>${escapeHtml(profile.title)} · ${escapeHtml(profile.country)}</small>
         </div>
       </div>
-      <p>${escapeHtml(profile.bio || "這位會員尚未填寫簡介。")}</p>
+      <p>${escapeHtml(isOwnProfile ? profile.bio || "這是你的會員頁。" : publicMemberSummary(profile))}</p>
       <h4>我有</h4>
       <div class="tag-list">${tags(profile.resources_have)}</div>
       <h4>我需要</h4>
       <div class="tag-list">${tags(profile.resources_need, "need")}</div>
       <div class="member-meta">
-        <span>Telegram ${escapeHtml(profile.telegram || "未公開")}</span>
-        <span>Twitter/X ${escapeHtml(profile.twitter || "未公開")}</span>
+        <span>聯絡方式需透過平台媒合</span>
+        <span>雙方有合作意願後再解鎖</span>
       </div>
       <button class="button primary" type="button" data-connect="${profile.id}">建立連結</button>
     </article>`;

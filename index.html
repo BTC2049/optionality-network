@@ -151,7 +151,12 @@
             <p class="eyebrow">Discovery</p>
             <h2>搜尋會員與資源</h2>
           </div>
-          <p class="section-note">搜尋「台灣 KOL」、「Telegram 社群」、「交易所合作」、「AI 自動化」等關鍵字。</p>
+          <p class="section-note">搜尋「台灣 KOL」、「Telegram 社群」、「交易所合作」、「AI 自動化」等關鍵字。公開頁只顯示資源與合作條件，對方接受合作請求後即可解鎖個人資訊。</p>
+        </div>
+        <div class="unlock-flow" aria-label="資訊解鎖流程">
+          <span>提出合作需求</span>
+          <span>對方接受請求</span>
+          <span>解鎖個人資訊</span>
         </div>
         <div class="search-shell">
           <input id="memberSearch" type="search" placeholder="搜尋會員、角色、國家、資源或需求..." />
@@ -172,7 +177,12 @@
             <p class="eyebrow">Smart Matching</p>
             <h2>更適合你的合作人選</h2>
           </div>
-          <p class="section-note">系統會依照你的資源與需求推薦更適合的人選，優先把已註冊會員與高互補資源排在前面。</p>
+          <p class="section-note">系統會依照你的資源與需求推薦更適合的人選。配對後先用平台訊息確認意願，對方接受後即可交換個人資訊與後續聯絡方式。</p>
+        </div>
+        <div class="unlock-flow" aria-label="配對後解鎖流程">
+          <span>智能配對</span>
+          <span>站內溝通</span>
+          <span>接受後解鎖</span>
         </div>
         <div id="matchGrid" class="match-grid"></div>
       </section>
@@ -192,7 +202,7 @@
             <label>補充說明<textarea id="oppDesc" required>尋找台灣加密 KOL 協助新產品上市，需要 Twitter/X 與 Telegram 觸及。</textarea></label>
             <label>地區<input id="oppCountry" type="text" value="台灣" required /></label>
             <label>預算<input id="oppBudget" type="text" placeholder="選填，例如 US$500-2,000" /></label>
-            <label>聯絡方式<input id="oppContact" type="text" value="Telegram @opnetwork" required /></label>
+            <label>偏好的回覆方式<input id="oppContact" type="text" value="站內訊息" required /></label>
             <button class="button primary wide" type="submit">發布需求</button>
           </form>
           <div id="opportunityList" class="opportunity-list"></div>
@@ -205,6 +215,7 @@
             <p class="eyebrow">Partnership Requests</p>
             <h2>合作請求</h2>
           </div>
+          <p class="section-note">接受請求代表雙方有合作意願，系統會提示可以交換個人資訊與進一步聯絡方式。</p>
         </div>
         <div id="requestInbox" class="inbox"></div>
       </section>
@@ -215,7 +226,7 @@
             <p class="eyebrow">My Profile</p>
             <h2>用 1 分鐘補上你的會員頁</h2>
           </div>
-          <p id="profileLink" class="section-note">會員頁越清楚，越容易收到有效合作。</p>
+          <p id="profileLink" class="section-note">你的資源會被看見，但私人聯絡方式不會公開。對方提出合作請求，且你接受後，才進一步解鎖個人資訊。</p>
         </div>
         <form id="profileForm" class="signup-form">
           <div class="form-grid">
@@ -235,8 +246,8 @@
                 <option>AI 自動化專家</option>
               </select>
             </label>
-            <label>Telegram<input id="telegram" type="text" placeholder="@username" /></label>
-            <label>Twitter/X<input id="twitter" type="text" placeholder="@handle" /></label>
+            <label>Telegram<input id="telegram" type="text" placeholder="僅平台內部媒合使用，不公開" /></label>
+            <label>Twitter/X<input id="twitter" type="text" placeholder="僅平台內部媒合使用，不公開" /></label>
           </div>
           <label>一句話介紹你<textarea id="bio" placeholder="例如：我經營台灣交易社群，正在找交易所與 KOL 合作。"></textarea></label>
           <div class="tag-picker" data-field="have">
