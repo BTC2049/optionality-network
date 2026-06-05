@@ -13,6 +13,7 @@ const supabaseClient = hasSupabaseConfig
   : null;
 
 const adminEmails = config.adminEmails || [];
+const pageIds = ["home", "quick-start", "members", "matches", "opportunities", "requests", "profile", "admin"];
 
 const seed = {
   members: [
@@ -40,7 +41,7 @@ const seed = {
       username: "exchange-ryan",
       full_name: "Ryan Park",
       title: "交易所商務拓展",
-      country: "新加坡",
+      country: "台灣",
       languages: ["English", "中文"],
       bio: "協助交易所拓展亞洲聯盟推廣、KOL 與社群合作夥伴。",
       telegram: "@ryanbd",
@@ -186,7 +187,7 @@ function createShowcaseMembers() {
     "影片剪輯師",
     "平面設計師",
   ];
-  const countries = ["台灣", "香港", "新加坡", "日本", "韓國", "馬來西亞", "泰國", "越南", "美國", "英國"];
+  const countries = ["台灣"];
   const resourcesHave = [
     ["Telegram 社群", "Twitter/X 受眾", "KOL 人脈"],
     ["交易所資源", "聯盟推廣人脈", "項目方資源"],
@@ -210,7 +211,7 @@ function createShowcaseMembers() {
   return names.map((name, index) => {
     const number = index + 1;
     const role = roles[index % roles.length];
-    const country = countries[(index * 3) % countries.length];
+    const country = "台灣";
     const have = resourcesHave[index % resourcesHave.length];
     const need = resourcesNeed[(index + 2) % resourcesNeed.length];
     return {
@@ -220,7 +221,7 @@ function createShowcaseMembers() {
       full_name: name,
       title: role,
       country,
-      languages: country === "日本" ? ["日文", "英文"] : country === "韓國" ? ["韓文", "英文"] : ["中文", "英文"],
+      languages: ["中文", "英文"],
       bio: `${country} ${role}，可協助${have.slice(0, 2).join("、")}，正在尋找${need.slice(0, 2).join("、")}。`,
       telegram: `@showcase${number}`,
       twitter: `@showcase${number}`,
@@ -271,6 +272,7 @@ init();
 
 async function init() {
   wireEvents();
+  renderRoute();
   if (supabaseClient) await initCloudMode();
   else initDemoMode();
   await refreshAll();
@@ -298,12 +300,40 @@ function wireEvents() {
   els.profileForm.addEventListener("submit", handleProfileSave);
   els.opportunityForm.addEventListener("submit", handleOpportunitySave);
   els.notificationBell.addEventListener("click", () => {
-    location.hash = "requests";
+    navigateTo("requests");
     showToast("已帶你到合作請求");
   });
   els.closeMessageModal.addEventListener("click", closeMessageModal);
   els.messageForm.addEventListener("submit", handleMessageSend);
+  window.addEventListener("hashchange", renderRoute);
   document.addEventListener("click", handleDocumentClick);
+}
+
+function renderRoute() {
+  const requestedPage = window.location.hash.replace("#", "") || "home";
+  const page = pageIds.includes(requestedPage) ? requestedPage : "home";
+
+  pageIds.forEach((id) => {
+    const section = document.querySelector(`#${id}`);
+    if (!section) return;
+    const shouldShow = id === page;
+    section.classList.toggle("page-active", shouldShow);
+    section.classList.toggle("page-hidden", !shouldShow);
+    section.setAttribute("aria-hidden", shouldShow ? "false" : "true");
+  });
+
+  document.querySelectorAll(".topbar nav a, .brand").forEach((link) => {
+    const target = link.getAttribute("href")?.replace("#", "") || "home";
+    link.classList.toggle("active", target === page);
+  });
+
+  window.scrollTo({ top: 0, behavior: "instant" });
+}
+
+function navigateTo(page) {
+  const target = pageIds.includes(page) ? page : "home";
+  if (window.location.hash === `#${target}`) renderRoute();
+  else window.location.hash = target;
 }
 
 async function initCloudMode() {
@@ -407,7 +437,7 @@ function updateAdminVisibility() {
   els.adminSection.classList.toggle("hidden", !allowed);
   els.adminSection.setAttribute("aria-hidden", allowed ? "false" : "true");
   if (!allowed && window.location.hash === "#admin") {
-    window.location.hash = "members";
+    navigateTo("members");
     showToast("管理後台僅限管理員查看");
   }
 }
@@ -584,7 +614,7 @@ async function handleProfileSave(event) {
   showToast("會員頁已儲存");
   await refreshAll();
   await runPendingIntent();
-  location.hash = "profile";
+  navigateTo("profile");
 }
 
 async function handleOpportunitySave(event) {
@@ -612,7 +642,7 @@ async function saveOpportunity(opportunity) {
   const count = await getActiveOpportunityCount();
   if (count >= 3) {
     showToast("你已經有 3 篇有效需求，請先撤銷一篇再發布新的");
-    location.hash = "opportunities";
+    navigateTo("opportunities");
     return;
   }
 
@@ -651,7 +681,7 @@ async function handleDocumentClick(event) {
     const username = profileButton.dataset.profile;
     window.history.pushState({}, "", `?u=${encodeURIComponent(username)}#profile`);
     renderProfile();
-    location.hash = "profile";
+    navigateTo("profile");
     return;
   }
 
@@ -769,7 +799,7 @@ async function saveRequest(request) {
     state.requests.unshift(pendingRequest);
     renderApp();
   }
-  location.hash = "requests";
+  navigateTo("requests");
   if (requestId) openMessageModal(requestId);
 }
 
@@ -812,7 +842,7 @@ async function cancelOpportunity(id) {
 
 function askLoginFirst(message) {
   showToast(message);
-  location.hash = "quick-start";
+  navigateTo("quick-start");
 }
 
 function getAuthRedirectUrl() {
@@ -822,7 +852,7 @@ function getAuthRedirectUrl() {
 function askProfileLater(message) {
   showToast(message);
   prefillProfileFromEmail();
-  location.hash = "profile";
+  navigateTo("profile");
 }
 
 function prefillProfileFromEmail() {
