@@ -391,6 +391,17 @@ h2 {
   padding: 22px;
 }
 
+.login-controls,
+.logged-in-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.logged-in-actions strong {
+  color: var(--green);
+  font-size: 18px;
+}
+
 .quick-card span {
   color: var(--green);
   font-size: 13px;

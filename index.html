@@ -86,10 +86,17 @@
           <form id="loginForm" class="quick-card">
             <span>Step 1</span>
             <h3>登入開始</h3>
-            <p>用 Email 收登入連結，或直接用 Google 登入。</p>
-            <input id="loginEmail" type="email" placeholder="name@email.com" required />
-            <button class="button primary wide" type="submit">寄送 Email 登入連結</button>
-            <button id="googleLoginButton" class="button secondary wide" type="button">使用 Google 登入</button>
+            <p id="loginCardCopy">用 Email 收登入連結，或直接用 Google 登入。</p>
+            <div id="loginControls" class="login-controls">
+              <input id="loginEmail" type="email" placeholder="name@email.com" required />
+              <button class="button primary wide" type="submit">寄送 Email 登入連結</button>
+              <button id="googleLoginButton" class="button secondary wide" type="button">使用 Google 登入</button>
+            </div>
+            <div id="loggedInActions" class="logged-in-actions hidden">
+              <strong>你已登入</strong>
+              <a class="button primary wide" href="#opportunities">發布需求</a>
+              <a class="button secondary wide" href="#profile">補會員頁</a>
+            </div>
             <small id="authMessage">登入後就可以發布需求和發送合作請求。</small>
           </form>
           <article class="quick-card">

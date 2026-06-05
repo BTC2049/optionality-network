@@ -114,6 +114,9 @@ const els = {
   logoutButton: document.querySelector("#logoutButton"),
   loginForm: document.querySelector("#loginForm"),
   loginEmail: document.querySelector("#loginEmail"),
+  loginControls: document.querySelector("#loginControls"),
+  loggedInActions: document.querySelector("#loggedInActions"),
+  loginCardCopy: document.querySelector("#loginCardCopy"),
   googleLoginButton: document.querySelector("#googleLoginButton"),
   authMessage: document.querySelector("#authMessage"),
   profileForm: document.querySelector("#profileForm"),
@@ -212,6 +215,21 @@ async function refreshAll() {
   renderProfile();
   renderAdmin();
   renderNotificationBell();
+  renderLoginState();
+}
+
+function renderLoginState() {
+  const loggedIn = Boolean(currentUser);
+  els.loginControls.classList.toggle("hidden", loggedIn);
+  els.loggedInActions.classList.toggle("hidden", !loggedIn);
+  els.loginCardCopy.textContent = loggedIn
+    ? "你已經登入，可以直接發布需求、發送合作請求，或補完整會員頁。"
+    : "用 Email 收登入連結，或直接用 Google 登入。";
+  if (loggedIn) {
+    els.authMessage.textContent = currentProfile
+      ? `目前登入：${currentUser.email || "已登入"}`
+      : "已登入，系統正在建立你的基本會員頁。";
+  }
 }
 
 function updateAdminVisibility() {
