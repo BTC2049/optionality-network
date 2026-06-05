@@ -284,6 +284,7 @@ const els = {
   messageInput: document.querySelector("#messageInput"),
   adminNavLink: document.querySelector("#adminNavLink"),
   adminSection: document.querySelector("#admin"),
+  menuButton: document.querySelector("#menuButton"),
   profileView: document.querySelector("#profileView"),
   profileLink: document.querySelector("#profileLink"),
   toast: document.querySelector("#toast"),
@@ -328,6 +329,7 @@ function wireEvents() {
   els.loginForm.addEventListener("submit", handleEmailLogin);
   els.googleLoginButton.addEventListener("click", handleGoogleLogin);
   els.logoutButton.addEventListener("click", handleLogout);
+  els.menuButton?.addEventListener("click", toggleMenu);
   els.profileForm.addEventListener("submit", handleProfileSave);
   els.opportunityForm.addEventListener("submit", handleOpportunitySave);
   els.benefitNeedForm?.addEventListener("submit", handleBenefitNeedSave);
@@ -340,6 +342,12 @@ function wireEvents() {
   els.messageForm.addEventListener("submit", handleMessageSend);
   window.addEventListener("hashchange", renderRoute);
   document.addEventListener("click", handleDocumentClick);
+}
+
+function toggleMenu(event) {
+  event.stopPropagation();
+  const isOpen = document.body.classList.toggle("nav-open");
+  els.menuButton?.setAttribute("aria-expanded", String(isOpen));
 }
 
 function renderRoute() {
@@ -939,6 +947,10 @@ async function getActiveOpportunityCount() {
 }
 
 async function handleDocumentClick(event) {
+  const navLink = event.target.closest("#mainNav a");
+  if (navLink) closeMenu();
+  else if (document.body.classList.contains("nav-open") && !event.target.closest("#mainNav") && !event.target.closest("#menuButton")) closeMenu();
+
   const homeLoginLink = event.target.closest('.hero .hero-actions a[href="#quick-start"]');
   if (homeLoginLink) {
     event.preventDefault();
@@ -995,6 +1007,11 @@ async function handleDocumentClick(event) {
 
   const cancelOppButton = event.target.closest("[data-cancel-opportunity]");
   if (cancelOppButton) await cancelOpportunity(cancelOppButton.dataset.cancelOpportunity);
+}
+
+function closeMenu() {
+  document.body.classList.remove("nav-open");
+  els.menuButton?.setAttribute("aria-expanded", "false");
 }
 
 async function createRequest(receiverId) {
