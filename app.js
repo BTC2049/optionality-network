@@ -96,13 +96,19 @@ const seed = {
     },
   ],
   requests: [],
+  messages: [],
 };
 
 let state = loadDemoState();
+state.members ||= [];
+state.opportunities ||= [];
+state.requests ||= [];
+state.messages ||= [];
 let currentUser = null;
 let currentProfile = null;
 let activeFilter = "all";
 let pendingIntent = null;
+let activeRequestId = null;
 
 const els = {
   logoutButton: document.querySelector("#logoutButton"),
@@ -116,6 +122,14 @@ const els = {
   opportunityForm: document.querySelector("#opportunityForm"),
   opportunityList: document.querySelector("#opportunityList"),
   requestInbox: document.querySelector("#requestInbox"),
+  notificationBell: document.querySelector("#notificationBell"),
+  notificationCount: document.querySelector("#notificationCount"),
+  messageModal: document.querySelector("#messageModal"),
+  closeMessageModal: document.querySelector("#closeMessageModal"),
+  messageTitle: document.querySelector("#messageTitle"),
+  messageThread: document.querySelector("#messageThread"),
+  messageForm: document.querySelector("#messageForm"),
+  messageInput: document.querySelector("#messageInput"),
   adminNavLink: document.querySelector("#adminNavLink"),
   adminSection: document.querySelector("#admin"),
   profileView: document.querySelector("#profileView"),
@@ -152,6 +166,12 @@ function wireEvents() {
   els.logoutButton.addEventListener("click", handleLogout);
   els.profileForm.addEventListener("submit", handleProfileSave);
   els.opportunityForm.addEventListener("submit", handleOpportunitySave);
+  els.notificationBell.addEventListener("click", () => {
+    location.hash = "requests";
+    showToast("已帶你到合作請求");
+  });
+  els.closeMessageModal.addEventListener("click", closeMessageModal);
+  els.messageForm.addEventListener("submit", handleMessageSend);
   document.addEventListener("click", handleDocumentClick);
 }
 
@@ -190,6 +210,7 @@ async function refreshAll() {
   renderRequests();
   renderProfile();
   renderAdmin();
+  renderNotificationBell();
 }
 
 function updateAdminVisibility() {
@@ -206,7 +227,7 @@ function updateAdminVisibility() {
 async function loadCloudData() {
   if (!supabaseClient) return;
 
-  const [{ data: members }, { data: opportunities }, { data: requests }] = await Promise.all([
+  const [{ data: members }, { data: opportunities }, { data: requests }, { data: messages }] = await Promise.all([
     supabaseClient.from("profiles").select("*").order("created_at", { ascending: false }),
     supabaseClient.from("opportunities").select("*").order("created_at", { ascending: false }),
     currentUser
@@ -216,11 +237,18 @@ async function loadCloudData() {
           .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
+    currentUser
+      ? supabaseClient
+          .from("partnership_messages")
+          .select("*, sender:sender_id(username, full_name)")
+          .order("created_at", { ascending: true })
+      : Promise.resolve({ data: [] }),
   ]);
 
   state.members = members || [];
   state.opportunities = opportunities || [];
   state.requests = requests || [];
+  state.messages = messages || [];
 }
 
 function findCurrentProfile() {
@@ -408,6 +436,12 @@ async function handleDocumentClick(event) {
     return;
   }
 
+  const chatButton = event.target.closest("[data-open-chat]");
+  if (chatButton) {
+    openMessageModal(chatButton.dataset.openChat);
+    return;
+  }
+
   const cancelOppButton = event.target.closest("[data-cancel-opportunity]");
   if (cancelOppButton) await cancelOpportunity(cancelOppButton.dataset.cancelOpportunity);
 }
@@ -434,11 +468,20 @@ async function createRequest(receiverId) {
 
 async function saveRequest(request) {
   if (supabaseClient) {
-    const { error } = await supabaseClient.from("partnership_requests").insert(request);
+    const { data, error } = await supabaseClient.from("partnership_requests").insert(request).select("id").single();
     if (error) return showToast("請求送出失敗，請稍後再試");
+    if (data?.id) await sendMessage(data.id, request.message, { silent: true });
   } else {
     const receiver = state.members.find((member) => member.id === request.receiver_id);
-    state.requests.unshift({ ...request, id: `demo-req-${Date.now()}`, receiver, created_at: new Date().toISOString() });
+    const id = `demo-req-${Date.now()}`;
+    state.requests.unshift({ ...request, id, receiver, created_at: new Date().toISOString() });
+    state.messages.push({
+      id: `demo-msg-${Date.now()}`,
+      request_id: id,
+      sender_id: currentUser.id,
+      body: request.message,
+      created_at: new Date().toISOString(),
+    });
     saveDemoState();
   }
 
@@ -619,10 +662,103 @@ function requestCard(request) {
           ? `<div class="row-actions">
               <button class="button primary" type="button" data-request-action="accept" data-request-id="${request.id}">接受</button>
               <button class="button ghost" type="button" data-request-action="later" data-request-id="${request.id}">稍後處理</button>
+              <button class="button secondary" type="button" data-open-chat="${request.id}">訊息溝通</button>
             </div>`
-          : `<div class="metrics-mini"><span>${label}</span><span>${dateText(request.created_at)}</span></div>`
+          : `<div class="row-actions">
+              <button class="button secondary" type="button" data-open-chat="${request.id}">訊息溝通</button>
+              <span class="metrics-mini"><span>${label}</span><span>${dateText(request.created_at)}</span></span>
+            </div>`
       }
     </article>`;
+}
+
+function renderNotificationBell() {
+  if (!currentUser) {
+    els.notificationBell.classList.add("hidden");
+    return;
+  }
+
+  const incomingPending = state.requests.filter(
+    (request) => request.receiver_id === currentUser.id && request.status === "pending"
+  ).length;
+  const incomingMessages = state.messages.filter((message) => message.sender_id !== currentUser.id).length;
+  const count = incomingPending + incomingMessages;
+  els.notificationCount.textContent = count;
+  els.notificationBell.classList.toggle("hidden", count === 0);
+}
+
+function openMessageModal(requestId) {
+  activeRequestId = requestId;
+  const request = state.requests.find((item) => item.id === requestId);
+  if (!request) return;
+
+  const otherName =
+    request.receiver_id === currentUser?.id
+      ? request.sender?.full_name || request.sender?.username || "對方"
+      : request.receiver?.full_name || request.receiver?.username || "對方";
+
+  els.messageTitle.textContent = `與 ${otherName} 的合作訊息`;
+  renderMessageThread();
+  els.messageModal.classList.remove("hidden");
+  els.messageInput.focus();
+}
+
+function closeMessageModal() {
+  activeRequestId = null;
+  els.messageModal.classList.add("hidden");
+  els.messageInput.value = "";
+}
+
+function renderMessageThread() {
+  const messages = state.messages.filter((message) => message.request_id === activeRequestId);
+  els.messageThread.innerHTML = messages.length
+    ? messages
+        .map((message) => {
+          const mine = message.sender_id === currentUser?.id;
+          const senderName = message.sender?.full_name || message.sender?.username || (mine ? "你" : "對方");
+          return `<div class="message-bubble ${mine ? "mine" : ""}">
+            <small>${escapeHtml(senderName)} · ${dateText(message.created_at)}</small>
+            <p>${escapeHtml(message.body)}</p>
+          </div>`;
+        })
+        .join("")
+    : '<p class="empty-text">還沒有訊息，先打聲招呼吧。</p>';
+  els.messageThread.scrollTop = els.messageThread.scrollHeight;
+}
+
+async function handleMessageSend(event) {
+  event.preventDefault();
+  const body = els.messageInput.value.trim();
+  if (!activeRequestId || !body) return;
+  await sendMessage(activeRequestId, body);
+  els.messageInput.value = "";
+}
+
+async function sendMessage(requestId, body, options = {}) {
+  if (!currentUser) return askLoginFirst("先登入，就能回覆訊息");
+
+  const message = {
+    request_id: requestId,
+    sender_id: currentProfile?.id || currentUser.id,
+    body,
+  };
+
+  if (supabaseClient) {
+    const { error } = await supabaseClient.from("partnership_messages").insert(message);
+    if (error) return showToast("訊息送出失敗，請稍後再試");
+  } else {
+    state.messages.push({
+      ...message,
+      id: `demo-msg-${Date.now()}`,
+      sender: currentProfile ? { full_name: currentProfile.full_name, username: currentProfile.username } : null,
+      created_at: new Date().toISOString(),
+    });
+    saveDemoState();
+  }
+
+  if (!options.silent) showToast("訊息已送出");
+  await refreshAll();
+  if (activeRequestId === requestId) renderMessageThread();
 }
 
 function renderProfile() {

@@ -241,6 +241,28 @@
       <span>The LinkedIn of Crypto Growth</span>
     </footer>
 
+    <button id="notificationBell" class="notification-bell hidden" type="button">
+      <strong id="notificationCount">0</strong>
+      <span>新的合作訊息</span>
+    </button>
+
+    <div id="messageModal" class="message-modal hidden" role="dialog" aria-modal="true" aria-labelledby="messageTitle">
+      <div class="message-dialog">
+        <header>
+          <div>
+            <p class="eyebrow">Messages</p>
+            <h3 id="messageTitle">合作訊息</h3>
+          </div>
+          <button id="closeMessageModal" class="button ghost" type="button">關閉</button>
+        </header>
+        <div id="messageThread" class="message-thread"></div>
+        <form id="messageForm" class="message-form">
+          <input id="messageInput" type="text" placeholder="輸入你想回覆的內容..." required />
+          <button class="button primary" type="submit">送出</button>
+        </form>
+      </div>
+    </div>
+
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

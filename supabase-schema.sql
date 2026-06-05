@@ -44,6 +44,14 @@ create table if not exists public.partnership_requests (
   updated_at timestamptz default now()
 );
 
+create table if not exists public.partnership_messages (
+  id uuid primary key default gen_random_uuid(),
+  request_id uuid references public.partnership_requests(id) on delete cascade,
+  sender_id uuid references public.profiles(id) on delete cascade,
+  body text not null,
+  created_at timestamptz default now()
+);
+
 create table if not exists public.admins (
   email text primary key
 );
@@ -51,6 +59,7 @@ create table if not exists public.admins (
 alter table public.profiles enable row level security;
 alter table public.opportunities enable row level security;
 alter table public.partnership_requests enable row level security;
+alter table public.partnership_messages enable row level security;
 alter table public.admins enable row level security;
 
 create or replace function public.is_admin()
@@ -132,6 +141,32 @@ create policy "receiver can update requests"
 on public.partnership_requests for update
 using (auth.uid() = receiver_id or public.is_admin())
 with check (auth.uid() = receiver_id or public.is_admin());
+
+drop policy if exists "request participants can read messages" on public.partnership_messages;
+create policy "request participants can read messages"
+on public.partnership_messages for select
+using (
+  exists (
+    select 1
+    from public.partnership_requests
+    where partnership_requests.id = partnership_messages.request_id
+      and (auth.uid() = partnership_requests.sender_id or auth.uid() = partnership_requests.receiver_id)
+  )
+  or public.is_admin()
+);
+
+drop policy if exists "request participants can send messages" on public.partnership_messages;
+create policy "request participants can send messages"
+on public.partnership_messages for insert
+with check (
+  auth.uid() = sender_id
+  and exists (
+    select 1
+    from public.partnership_requests
+    where partnership_requests.id = partnership_messages.request_id
+      and (auth.uid() = partnership_requests.sender_id or auth.uid() = partnership_requests.receiver_id)
+  )
+);
 
 drop policy if exists "admins can read admins" on public.admins;
 create policy "admins can read admins"

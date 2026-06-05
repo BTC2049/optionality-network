@@ -720,6 +720,115 @@ label {
   transform: translateY(0);
 }
 
+.notification-bell {
+  position: fixed;
+  right: 18px;
+  bottom: 86px;
+  z-index: 19;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+  max-width: min(330px, calc(100vw - 36px));
+  padding: 12px 14px;
+  border: 1px solid rgba(53, 240, 192, 0.38);
+  border-radius: 12px;
+  color: var(--ink);
+  background: rgba(8, 22, 35, 0.94);
+  box-shadow: var(--shadow), 0 0 28px rgba(53, 240, 192, 0.12);
+  cursor: pointer;
+}
+
+.notification-bell strong {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  color: #061019;
+  background: var(--green);
+}
+
+.notification-bell span {
+  color: #dffef7;
+  font-weight: 800;
+}
+
+.message-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(2, 6, 14, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.message-dialog {
+  display: grid;
+  grid-template-rows: auto minmax(260px, 52vh) auto;
+  width: min(720px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-strong);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.message-dialog header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.message-thread {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 18px;
+  overflow-y: auto;
+}
+
+.message-bubble {
+  width: fit-content;
+  max-width: 78%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(6, 12, 23, 0.68);
+}
+
+.message-bubble.mine {
+  justify-self: end;
+  border-color: rgba(53, 240, 192, 0.34);
+  background: rgba(53, 240, 192, 0.1);
+}
+
+.message-bubble small {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.message-bubble p {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+.message-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: 18px;
+  border-top: 1px solid var(--line);
+}
+
 footer {
   display: flex;
   justify-content: space-between;
