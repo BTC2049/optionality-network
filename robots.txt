@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://btc2049.github.io/optionality-network/sitemap.xml
