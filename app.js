@@ -1,4 +1,4 @@
-const DEMO_KEY = "optionality-network-demo-v2";
+const DEMO_KEY = "optionality-network-demo-v3";
 
 const config = window.OPTIONALITY_CONFIG || {};
 const hasSupabaseConfig =
@@ -77,6 +77,7 @@ const seed = {
   opportunities: [
     {
       id: "demo-opp-1",
+      author_id: "demo-mina",
       title: "尋找台灣加密 KOL",
       description: "新交易產品上市，需要 Twitter/X 與 Telegram 推廣合作。",
       country: "台灣",
@@ -86,6 +87,7 @@ const seed = {
     },
     {
       id: "demo-opp-2",
+      author_id: "demo-ryan",
       title: "需要 Telegram 社群",
       description: "尋找交易、空投、Web3 學習型社群，合作 AMA 與教育內容。",
       country: "亞洲",
@@ -101,6 +103,7 @@ let state = loadDemoState();
 let currentUser = null;
 let currentProfile = null;
 let activeFilter = "all";
+let pendingIntent = null;
 
 const els = {
   logoutButton: document.querySelector("#logoutButton"),
@@ -126,11 +129,8 @@ init();
 
 async function init() {
   wireEvents();
-  if (supabaseClient) {
-    await initCloudMode();
-  } else {
-    initDemoMode();
-  }
+  if (supabaseClient) await initCloudMode();
+  else initDemoMode();
   await refreshAll();
 }
 
@@ -159,7 +159,6 @@ function wireEvents() {
 
 async function initCloudMode() {
   els.authMessage.textContent = "輸入 Email 後，我們會寄送登入連結。";
-
   const { data } = await supabaseClient.auth.getSession();
   currentUser = data.session?.user || null;
   supabaseClient.auth.onAuthStateChange(async (_event, session) => {
@@ -169,7 +168,7 @@ async function initCloudMode() {
 }
 
 function initDemoMode() {
-  els.authMessage.textContent = "輸入 Email 後即可開始建立你的會員頁。";
+  els.authMessage.textContent = "輸入 Email 後即可開始體驗。";
   currentUser = { id: "demo-user", email: "demo@optionality.network" };
 }
 
@@ -184,9 +183,9 @@ function saveDemoState() {
 
 async function refreshAll() {
   els.logoutButton.classList.toggle("hidden", !currentUser || !supabaseClient);
-  updateAdminVisibility();
   await loadCloudData();
   currentProfile = findCurrentProfile();
+  updateAdminVisibility();
   fillProfileForm(currentProfile);
   renderMembers();
   renderOpportunities();
@@ -241,7 +240,7 @@ async function handleEmailLogin(event) {
   if (!email) return showToast("請輸入 Email");
   if (!supabaseClient) {
     currentUser = { id: "demo-user", email };
-    showToast("已登入，可以開始建立會員頁");
+    showToast("已登入，可以開始發布需求");
     await refreshAll();
     return;
   }
@@ -249,7 +248,7 @@ async function handleEmailLogin(event) {
     email,
     options: { emailRedirectTo: window.location.origin + window.location.pathname },
   });
-  showToast(error ? error.message : "登入連結已寄出，請檢查 Email");
+  showToast(error ? "登入連結寄送失敗，請稍後再試" : "登入連結已寄出，請檢查 Email");
 }
 
 async function handleGoogleLogin() {
@@ -272,11 +271,7 @@ async function handleLogout() {
 
 async function handleProfileSave(event) {
   event.preventDefault();
-  if (!currentUser) {
-    showToast("請先登入再建立會員頁");
-    location.hash = "join";
-    return;
-  }
+  if (!currentUser) return askLoginFirst("先登入，就能儲存你的會員頁");
 
   const profile = {
     id: currentUser.id,
@@ -294,19 +289,12 @@ async function handleProfileSave(event) {
     approved: currentProfile?.approved || false,
   };
 
-  if (!profile.username || !profile.full_name || !profile.country) {
-    showToast("請填寫姓名、Username 和國家");
-    return;
-  }
-
-  if (!profile.resources_have.length || !profile.resources_need.length) {
-    showToast("請至少各選一個擁有與需要的資源");
-    return;
-  }
+  if (!profile.username || !profile.full_name || !profile.country) return showToast("請填姓名、Username 和地區");
+  if (!profile.resources_have.length || !profile.resources_need.length) return showToast("請至少各選一個「我有」和「我需要」");
 
   if (supabaseClient) {
     const { error } = await supabaseClient.from("profiles").upsert(profile, { onConflict: "id" });
-    if (error) return showToast(error.message);
+    if (error) return showToast("會員頁儲存失敗，請確認 Username 沒有重複");
   } else {
     const index = state.members.findIndex((member) => member.id === profile.id);
     const demoProfile = { ...profile, approved: true, profile_views: 0, connections: 0, completed_partnerships: 0 };
@@ -317,23 +305,13 @@ async function handleProfileSave(event) {
 
   showToast(supabaseClient ? "會員頁已儲存，審核後會出現在探索頁" : "會員頁已儲存");
   await refreshAll();
+  await runPendingIntent();
   location.hash = "profile";
 }
 
 async function handleOpportunitySave(event) {
   event.preventDefault();
-
-  if (!currentUser) {
-    showToast("請先登入，再發布合作機會");
-    location.hash = "join";
-    return;
-  }
-
-  if (!currentProfile) {
-    showToast("請先建立並儲存你的會員頁，再發布合作機會");
-    location.hash = "join";
-    return;
-  }
+  if (!currentUser) return askLoginFirst("先用 Email 登入，就能發布需求");
 
   const opportunity = {
     title: value("#oppTitle"),
@@ -341,18 +319,28 @@ async function handleOpportunitySave(event) {
     country: value("#oppCountry"),
     budget: value("#oppBudget") || "預算可議",
     contact_method: value("#oppContact"),
-    author_id: currentProfile.id,
+    author_id: currentProfile?.id || currentUser.id,
   };
 
+  if (supabaseClient && !currentProfile) {
+    pendingIntent = { type: "opportunity", payload: opportunity };
+    return askProfileLater("差一步就能發布：請先補姓名、角色和你有/需要的資源");
+  }
+
+  await saveOpportunity(opportunity);
+}
+
+async function saveOpportunity(opportunity) {
   if (supabaseClient) {
     const { error } = await supabaseClient.from("opportunities").insert(opportunity);
-    if (error) return showToast("發布失敗，請確認你的會員頁已儲存，或稍後再試");
+    if (error) return showToast("發布失敗，請確認會員頁已儲存，或稍後再試");
   } else {
     state.opportunities.unshift({ ...opportunity, id: `demo-opp-${Date.now()}`, created_at: new Date().toISOString() });
     saveDemoState();
   }
 
-  showToast("合作機會已發布");
+  showToast("需求已發布");
+  pendingIntent = null;
   await refreshAll();
 }
 
@@ -385,45 +373,56 @@ async function handleDocumentClick(event) {
   }
 
   const approveButton = event.target.closest("[data-approve]");
-  if (approveButton) {
-    await approveProfile(approveButton.dataset.approve);
-  }
+  if (approveButton) await approveProfile(approveButton.dataset.approve);
 }
 
 async function createRequest(receiverId) {
-  if (!currentUser) return showToast("請先登入再發送合作請求");
+  if (!currentUser) return askLoginFirst("先用 Email 登入，就能發送合作請求");
   if (receiverId === currentUser.id) return showToast("這是你自己的會員頁");
+
   const receiver = state.members.find((member) => member.id === receiverId);
   const request = {
-    sender_id: currentUser.id,
+    sender_id: currentProfile?.id || currentUser.id,
     receiver_id: receiverId,
     message: `我想和 ${receiver?.full_name || "你"} 交換資源，看看是否能合作。`,
     status: "pending",
   };
 
+  if (supabaseClient && !currentProfile) {
+    pendingIntent = { type: "request", payload: request };
+    return askProfileLater("發送前先補一點資料，對方才知道你是誰");
+  }
+
+  await saveRequest(request);
+}
+
+async function saveRequest(request) {
   if (supabaseClient) {
     const { error } = await supabaseClient.from("partnership_requests").insert(request);
-    if (error) return showToast(error.message);
+    if (error) return showToast("請求送出失敗，請稍後再試");
   } else {
+    const receiver = state.members.find((member) => member.id === request.receiver_id);
     state.requests.unshift({ ...request, id: `demo-req-${Date.now()}`, receiver, created_at: new Date().toISOString() });
     saveDemoState();
   }
+
   showToast("合作請求已送出");
+  pendingIntent = null;
   await refreshAll();
   location.hash = "requests";
 }
 
 async function createOpportunityRequest(opportunityId) {
-  if (!currentUser) return showToast("請先登入再回覆機會");
+  if (!currentUser) return askLoginFirst("先用 Email 登入，就能回覆這個需求");
   const opportunity = state.opportunities.find((item) => item.id === opportunityId);
-  showToast(`已記錄你想合作：${opportunity?.title || "這個機會"}`);
+  showToast(`已記錄你想合作：${opportunity?.title || "這個需求"}`);
 }
 
 async function updateRequest(id, action) {
   const status = action === "accept" ? "accepted" : "later";
   if (supabaseClient) {
     const { error } = await supabaseClient.from("partnership_requests").update({ status }).eq("id", id);
-    if (error) return showToast(error.message);
+    if (error) return showToast("更新失敗，請稍後再試");
   } else {
     const request = state.requests.find((item) => item.id === id);
     if (request) request.status = status;
@@ -434,10 +433,10 @@ async function updateRequest(id, action) {
 }
 
 async function approveProfile(id) {
-  if (!isAdmin() && supabaseClient) return showToast("只有管理員可以審核會員");
+  if (!isAdmin() && supabaseClient) return showToast("管理後台僅限管理員使用");
   if (supabaseClient) {
     const { error } = await supabaseClient.from("profiles").update({ approved: true }).eq("id", id);
-    if (error) return showToast(error.message);
+    if (error) return showToast("審核失敗，請稍後再試");
   } else {
     const member = state.members.find((item) => item.id === id);
     if (member) member.approved = true;
@@ -445,6 +444,34 @@ async function approveProfile(id) {
   }
   showToast("會員已審核通過");
   await refreshAll();
+}
+
+function askLoginFirst(message) {
+  showToast(message);
+  location.hash = "quick-start";
+}
+
+function askProfileLater(message) {
+  showToast(message);
+  prefillProfileFromEmail();
+  location.hash = "profile";
+}
+
+function prefillProfileFromEmail() {
+  if (!currentUser?.email || value("#username")) return;
+  const name = currentUser.email.split("@")[0];
+  setValue("#fullName", name);
+  setValue("#username", cleanUsername(name));
+}
+
+async function runPendingIntent() {
+  if (!pendingIntent || !currentProfile) return;
+  if (pendingIntent.type === "opportunity") {
+    await saveOpportunity({ ...pendingIntent.payload, author_id: currentProfile.id });
+  }
+  if (pendingIntent.type === "request") {
+    await saveRequest({ ...pendingIntent.payload, sender_id: currentProfile.id });
+  }
 }
 
 function renderMembers() {
@@ -517,7 +544,7 @@ function renderOpportunities() {
       </article>`
         )
         .join("")
-    : '<article class="opportunity-card"><h3>目前沒有合作機會</h3><p>發布第一個需求，讓適合的人找到你。</p></article>';
+    : '<article class="opportunity-card"><h3>目前沒有需求</h3><p>發布第一個需求，讓適合的人找到你。</p></article>';
 }
 
 function renderRequests() {
@@ -552,11 +579,11 @@ function renderProfile() {
   const username = new URLSearchParams(window.location.search).get("u");
   const profile = username
     ? state.members.find((member) => member.username === username)
-    : currentProfile || state.members[0];
+    : currentProfile || null;
 
   if (!profile) {
-    els.profileView.innerHTML = '<article class="member-card"><h3>尚未建立會員頁</h3><p>請先登入並儲存你的會員資料。</p></article>';
-    els.profileLink.textContent = "登入並儲存會員資料後，這裡會產生你的公開頁連結。";
+    els.profileView.innerHTML = '<article class="member-card"><h3>還沒有會員頁</h3><p>補完上面的簡單資料後，別人就知道你能提供什麼、正在找什麼。</p></article>';
+    els.profileLink.textContent = "會員頁越清楚，越容易收到有效合作。";
     return;
   }
 
@@ -572,9 +599,9 @@ function renderProfile() {
         </div>
       </div>
       <p>${escapeHtml(profile.bio || "這位會員尚未填寫簡介。")}</p>
-      <h4>我擁有的資源</h4>
+      <h4>我有</h4>
       <div class="tag-list">${tags(profile.resources_have)}</div>
-      <h4>我需要的資源</h4>
+      <h4>我需要</h4>
       <div class="tag-list">${tags(profile.resources_need, "need")}</div>
       <div class="member-meta">
         <span>Telegram ${escapeHtml(profile.telegram || "未公開")}</span>
@@ -586,7 +613,7 @@ function renderProfile() {
 
 function renderAdmin() {
   if (!isAdmin()) {
-  els.pendingMembers.innerHTML = "";
+    els.pendingMembers.innerHTML = "";
     return;
   }
 
@@ -607,7 +634,6 @@ function renderAdmin() {
         )
         .join("")
     : '<p class="empty-text">目前沒有待審核會員。</p>';
-
 }
 
 function fillProfileForm(profile) {
