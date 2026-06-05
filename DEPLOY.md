@@ -119,6 +119,33 @@ Redirect URLs: https://你的 GitHub 帳號.github.io/optionality-network/
 
 如果你用自訂網域，也把自訂網域加入 Redirect URLs。
 
+### 3.1 開啟 Google 登入
+
+如果要讓「使用 Google 登入」按鈕真的可用，還需要到 Supabase 開啟 Google Provider：
+
+```text
+Authentication → Providers → Google
+```
+
+打開 Google Provider，填入 Google Cloud OAuth 的：
+
+```text
+Client ID
+Client Secret
+```
+
+Google Cloud Console 的 Authorized redirect URI 要填 Supabase 提供的 callback URL，通常長這樣：
+
+```text
+https://你的-project-id.supabase.co/auth/v1/callback
+```
+
+Supabase 的 Site URL / Redirect URLs 仍然要保留你的 GitHub Pages 網址：
+
+```text
+https://btc2049.github.io/optionality-network/
+```
+
 ### 4. 重新上傳到 GitHub
 
 把這些檔案更新到 GitHub repo 根目錄：

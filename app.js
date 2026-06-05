@@ -13,7 +13,8 @@ const supabaseClient = hasSupabaseConfig
   : null;
 
 const adminEmails = config.adminEmails || [];
-const pageIds = ["home", "quick-start", "members", "matches", "opportunities", "requests", "profile", "admin"];
+const pageIds = ["home", "benefits", "benefit-explore", "benefit-search", "benefit-results", "benefit-offers", "quick-start", "members", "matches", "opportunities", "requests", "profile", "admin"];
+const BENEFIT_PREFIX = "福利｜";
 
 const seed = {
   members: [
@@ -107,10 +108,13 @@ state.members ||= [];
 state.opportunities ||= [];
 state.requests ||= [];
 state.messages ||= [];
+state.benefitNeeds ||= {};
+state.localBenefitOffers ||= [];
 state.members = mergeDisplayMembers(state.members);
 let currentUser = null;
 let currentProfile = null;
 let activeFilter = "all";
+let activeBenefitFilter = "all";
 let pendingIntent = null;
 let activeRequestId = null;
 let realtimeChannel = null;
@@ -241,6 +245,7 @@ function createShowcaseMembers() {
       connections: 12 + ((index * 11) % 48),
       completed_partnerships: 2 + ((index * 5) % 14),
       member_since: "2026-06-01",
+      provider_id: "showcase-02",
       created_at: "2026-06-01T00:00:00.000Z",
       is_showcase_member: true,
     };
@@ -262,6 +267,12 @@ const els = {
   matchGrid: document.querySelector("#matchGrid"),
   opportunityForm: document.querySelector("#opportunityForm"),
   opportunityList: document.querySelector("#opportunityList"),
+  benefitNeedForm: document.querySelector("#benefit-search #benefitNeedForm"),
+  benefitMatchGrid: document.querySelector("#benefit-results #benefitMatchGridMain"),
+  benefitExploreSearch: document.querySelector("#benefitExploreSearch"),
+  benefitExploreGrid: document.querySelector("#benefitExploreGrid"),
+  benefitOfferForm: document.querySelector("#benefitOfferForm"),
+  benefitOfferList: document.querySelector("#benefitOfferList"),
   requestInbox: document.querySelector("#requestInbox"),
   notificationBell: document.querySelector("#notificationBell"),
   notificationCount: document.querySelector("#notificationCount"),
@@ -296,6 +307,7 @@ function wireEvents() {
 
   document.querySelectorAll(".filter").forEach((button) => {
     button.addEventListener("click", () => {
+      if (button.classList.contains("benefit-filter")) return;
       document.querySelectorAll(".filter").forEach((item) => item.classList.remove("active"));
       button.classList.add("active");
       activeFilter = button.dataset.filter;
@@ -304,11 +316,22 @@ function wireEvents() {
   });
 
   els.memberSearch.addEventListener("input", renderMembers);
+  els.benefitExploreSearch?.addEventListener("input", renderBenefitExplore);
+  document.querySelectorAll(".benefit-filter").forEach((button) => {
+    button.addEventListener("click", () => {
+      document.querySelectorAll(".benefit-filter").forEach((item) => item.classList.remove("active"));
+      button.classList.add("active");
+      activeBenefitFilter = button.dataset.benefitFilter || "all";
+      renderBenefitExplore();
+    });
+  });
   els.loginForm.addEventListener("submit", handleEmailLogin);
   els.googleLoginButton.addEventListener("click", handleGoogleLogin);
   els.logoutButton.addEventListener("click", handleLogout);
   els.profileForm.addEventListener("submit", handleProfileSave);
   els.opportunityForm.addEventListener("submit", handleOpportunitySave);
+  els.benefitNeedForm?.addEventListener("submit", handleBenefitNeedSave);
+  els.benefitOfferForm?.addEventListener("submit", handleBenefitOfferSave);
   els.notificationBell.addEventListener("click", () => {
     navigateTo("requests");
     showToast("已帶你到合作請求");
@@ -322,6 +345,8 @@ function wireEvents() {
 function renderRoute() {
   const requestedPage = window.location.hash.replace("#", "") || "home";
   const page = pageIds.includes(requestedPage) ? requestedPage : "home";
+  const audience = getPageAudience(page);
+  document.body.dataset.audience = audience;
 
   pageIds.forEach((id) => {
     const section = document.querySelector(`#${id}`);
@@ -332,12 +357,21 @@ function renderRoute() {
     section.setAttribute("aria-hidden", shouldShow ? "false" : "true");
   });
 
-  document.querySelectorAll(".topbar nav a, .brand").forEach((link) => {
+  document.querySelectorAll(".topbar nav a").forEach((link) => {
+    const linkAudience = link.dataset.audience || "all";
+    const shouldShow = audience === "home" || linkAudience === "all" || linkAudience === audience;
+    link.classList.toggle("audience-hidden", !shouldShow);
     const target = link.getAttribute("href")?.replace("#", "") || "home";
     link.classList.toggle("active", target === page);
   });
 
   window.scrollTo({ top: 0, behavior: "instant" });
+}
+
+function getPageAudience(page) {
+  if (page === "home") return "home";
+  if (["benefits", "benefit-explore", "benefit-search", "benefit-results", "benefit-offers"].includes(page)) return "user";
+  return "operator";
 }
 
 function navigateTo(page) {
@@ -417,6 +451,10 @@ async function refreshAll() {
 function renderApp() {
   updateAdminVisibility();
   fillProfileForm(currentProfile);
+  fillBenefitNeedForm();
+  renderBenefitMatches();
+  renderBenefitExplore();
+  renderBenefitOffers();
   renderMembers();
   renderMatches();
   renderOpportunities();
@@ -502,6 +540,220 @@ function enrichMemberStats(member, index = 0) {
 function findCurrentProfile() {
   if (!currentUser) return null;
   return state.members.find((member) => member.id === currentUser.id || member.email === currentUser.email) || null;
+}
+
+function defaultBenefitOffers() {
+  return [
+    {
+      id: "benefit-fee",
+      title: "低手續費交易入口",
+      type: "最低手續費",
+      audience: "合約交易",
+      description: "適合重視交易成本與穩定撮合的用戶，接受媒合後可了解適合條件。",
+      value: "降低交易成本、適合高頻交易",
+      provider: "台灣交易資源 #218",
+      provider_id: "showcase-12",
+      created_at: "2026-06-01T00:00:00.000Z",
+    },
+    {
+      id: "benefit-new-user",
+      title: "新戶活動與任務組合",
+      type: "新戶活動",
+      audience: "新手入門",
+      description: "整理適合新手入門的開戶活動、任務回饋與基礎工具。",
+      value: "低門檻、適合新手、站內媒合",
+      provider: "台灣活動窗口 #407",
+      provider_id: "showcase-07",
+      created_at: "2026-06-01T00:00:00.000Z",
+    },
+    {
+      id: "benefit-airdrop",
+      title: "空投任務追蹤清單",
+      type: "空投任務",
+      audience: "空投任務",
+      description: "適合想系統化追蹤任務、工具測試與潛在空投機會的用戶。",
+      value: "任務整理、工具入口、風險提示",
+      provider: "Web3 任務資源 #613",
+      provider_id: "showcase-11",
+      created_at: "2026-06-01T00:00:00.000Z",
+    },
+    {
+      id: "benefit-tool",
+      title: "Web3 工具優惠包",
+      type: "工具優惠",
+      audience: "Web3 工具",
+      description: "包含交易、資料、社群、內容與自動化工具的優惠與試用入口。",
+      value: "工具折扣、試用入口、適合團隊",
+      provider: "工具合作方 #529",
+      created_at: "2026-06-01T00:00:00.000Z",
+    },
+  ];
+}
+
+function getBenefitOffers() {
+  const opportunityOffers = (state.opportunities || [])
+    .filter((item) => item.status !== "cancelled" && item.title?.startsWith(BENEFIT_PREFIX))
+    .map((item) => {
+      const [type = "交易活動", audience = "新手入門", value = "站內媒合"] = (item.budget || "").split("｜");
+      return {
+        id: item.id,
+        title: item.title.replace(BENEFIT_PREFIX, ""),
+        type,
+        audience,
+        description: item.description,
+        value,
+        provider: "平台經營者",
+        provider_id: item.author_id,
+        created_at: item.created_at,
+        source: "cloud",
+      };
+    });
+  return [...opportunityOffers, ...(state.localBenefitOffers || []), ...defaultBenefitOffers()];
+}
+
+function currentBenefitNeed() {
+  return {
+    type: state.benefitNeeds?.type || value("#benefitNeedType") || "最低手續費",
+    audience: state.benefitNeeds?.audience || value("#benefitUserType") || "新手入門",
+    volume: state.benefitNeeds?.volume || value("#benefitVolume") || "",
+  };
+}
+
+function benefitScore(offer, need) {
+  let score = 50;
+  if (offer.type === need.type) score += 28;
+  if (offer.audience === need.audience) score += 18;
+  if (need.volume && /合約|交易|USDT|u/i.test(need.volume) && /交易|手續費|活動/.test(`${offer.type}${offer.description}`)) score += 8;
+  return Math.min(96, score);
+}
+
+function renderBenefitMatches() {
+  if (!els.benefitMatchGrid) return;
+  const need = currentBenefitNeed();
+  const offers = getBenefitOffers()
+    .map((offer) => ({ ...offer, score: benefitScore(offer, need) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 6);
+  els.benefitMatchGrid.innerHTML = offers.map(benefitCard).join("");
+}
+
+function renderBenefitExplore() {
+  if (!els.benefitExploreGrid) return;
+  const query = (els.benefitExploreSearch?.value || "").trim().toLowerCase();
+  const offers = getBenefitOffers()
+    .filter((offer) => {
+      const haystack = `${offer.title} ${offer.type} ${offer.audience} ${offer.description} ${offer.value} ${offer.provider}`.toLowerCase();
+      const matchesQuery = !query || haystack.includes(query);
+      const matchesFilter = activeBenefitFilter === "all" || offer.type === activeBenefitFilter || haystack.includes(activeBenefitFilter.toLowerCase());
+      return matchesQuery && matchesFilter;
+    })
+    .map((offer) => ({ ...offer, score: benefitScore(offer, currentBenefitNeed()) }))
+    .slice(0, 12);
+
+  els.benefitExploreGrid.innerHTML = offers.length
+    ? offers.map(benefitCard).join("")
+    : '<article class="benefit-card"><h3>目前沒有符合的福利</h3><p>換一個關鍵字，或先設定需求，平台會幫你找更接近的方案。</p></article>';
+}
+
+function renderBenefitOffers() {
+  if (!els.benefitOfferList) return;
+  const offers = getBenefitOffers().slice(0, 8);
+  els.benefitOfferList.innerHTML = offers.map((offer) => benefitCard({ ...offer, score: benefitScore(offer, currentBenefitNeed()) })).join("");
+}
+
+function benefitCard(offer) {
+  const provider = benefitProvider(offer);
+  const profileButton = provider
+    ? `<button class="button secondary" type="button" data-profile="${escapeHtml(provider.username)}">查看經營者</button>`
+    : "";
+  const requestButton = provider?.is_showcase_member
+    ? `<button class="button primary" type="button" data-showcase-connect="${escapeHtml(provider.id)}">索取福利</button>`
+    : provider
+      ? `<button class="button primary" type="button" data-connect="${escapeHtml(provider.id)}">索取福利</button>`
+      : `<button class="button primary" type="button" data-benefit-lead="${escapeHtml(offer.id)}">索取福利</button>`;
+
+  return `
+    <article class="benefit-card benefit-result">
+      <div class="benefit-card-head">
+        <span>${escapeHtml(offer.type)}</span>
+        <strong>${offer.score || 78}%</strong>
+      </div>
+      <h3>${escapeHtml(offer.title)}</h3>
+      <p>${escapeHtml(offer.description)}</p>
+      <div class="member-meta">
+        <span>${escapeHtml(offer.audience)}</span>
+        <span>${escapeHtml(offer.value)}</span>
+        <span>${escapeHtml(offer.provider || "平台經營者")}</span>
+      </div>
+      <div class="row-actions">
+        ${profileButton}
+        ${requestButton}
+      </div>
+    </article>`;
+}
+
+function benefitProvider(offer) {
+  if (!offer?.provider_id) return null;
+  return state.members.find((member) => member.id === offer.provider_id) || null;
+}
+
+function fillBenefitNeedForm() {
+  if (!els.benefitNeedForm || !state.benefitNeeds) return;
+  setValue("#benefitNeedType", state.benefitNeeds.type || "最低手續費");
+  setValue("#benefitUserType", state.benefitNeeds.audience || "新手入門");
+  setValue("#benefitVolume", state.benefitNeeds.volume || "");
+}
+
+async function handleBenefitNeedSave(event) {
+  event.preventDefault();
+  state.benefitNeeds = {
+    type: value("#benefitNeedType"),
+    audience: value("#benefitUserType"),
+    volume: value("#benefitVolume"),
+  };
+  saveDemoState();
+  showToast("已更新你的福利配對");
+  renderBenefitMatches();
+  navigateTo("benefit-results");
+}
+
+async function handleBenefitOfferSave(event) {
+  event.preventDefault();
+  if (!currentUser) return askLoginFirst("先登入，就能發布可提供的福利");
+  const offer = {
+    title: value("#offerTitle"),
+    type: value("#offerType"),
+    audience: value("#offerAudience"),
+    description: value("#offerDesc"),
+    value: value("#offerValue"),
+  };
+  if (!offer.title || !offer.description) return showToast("請填福利名稱與說明");
+
+  if (supabaseClient) {
+    const payload = {
+      title: `${BENEFIT_PREFIX}${offer.title}`,
+      description: offer.description,
+      country: "台灣",
+      budget: `${offer.type}｜${offer.audience}｜${offer.value}`,
+      contact_method: "站內訊息",
+      author_id: currentProfile?.id || currentUser.id,
+      status: "active",
+    };
+    const { error } = await supabaseClient.from("opportunities").insert(payload);
+    if (error) return showToast("福利發布失敗，請先確認會員頁已建立");
+  } else {
+    state.localBenefitOffers.unshift({
+      ...offer,
+      id: `local-benefit-${Date.now()}`,
+      provider: currentProfile ? publicMemberLabel(currentProfile) : "平台經營者",
+      provider_id: currentProfile?.id || currentUser.id,
+      created_at: new Date().toISOString(),
+    });
+    saveDemoState();
+  }
+
+  showToast("福利已發布，會出現在用戶端配對中");
+  await refreshAll();
 }
 
 async function ensureCurrentUserProfile() {
@@ -678,14 +930,22 @@ async function getActiveOpportunityCount() {
       .from("opportunities")
       .select("id", { count: "exact", head: true })
       .eq("author_id", currentUser.id)
-      .eq("status", "active");
+      .eq("status", "active")
+      .not("title", "like", `${BENEFIT_PREFIX}%`);
     if (error) return 3;
     return count || 0;
   }
-  return state.opportunities.filter((item) => item.author_id === currentUser.id && item.status !== "cancelled").length;
+  return state.opportunities.filter((item) => item.author_id === currentUser.id && item.status !== "cancelled" && !item.title?.startsWith(BENEFIT_PREFIX)).length;
 }
 
 async function handleDocumentClick(event) {
+  const homeLoginLink = event.target.closest('.hero .hero-actions a[href="#quick-start"]');
+  if (homeLoginLink) {
+    event.preventDefault();
+    document.querySelector("#loginForm")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+
   const profileButton = event.target.closest("[data-profile]");
   if (profileButton) {
     const username = profileButton.dataset.profile;
@@ -698,6 +958,14 @@ async function handleDocumentClick(event) {
   const connectButton = event.target.closest("[data-connect]");
   if (connectButton) {
     await createRequest(connectButton.dataset.connect);
+    return;
+  }
+
+  const benefitLeadButton = event.target.closest("[data-benefit-lead]");
+  if (benefitLeadButton) {
+    if (!currentUser) return askLoginFirst("先登入，就能索取福利並開始對話");
+    showToast("已收到你的福利需求，我會優先幫你媒合");
+    navigateTo("requests");
     return;
   }
 
@@ -852,7 +1120,8 @@ async function cancelOpportunity(id) {
 
 function askLoginFirst(message) {
   showToast(message);
-  navigateTo("quick-start");
+  navigateTo("home");
+  setTimeout(() => document.querySelector("#loginForm")?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
 }
 
 function getAuthRedirectUrl() {
@@ -1033,7 +1302,9 @@ function memberCard(member) {
 }
 
 function renderOpportunities() {
-  const visible = state.opportunities.filter((item) => item.status !== "cancelled" || item.author_id === currentUser?.id || isAdmin());
+  const visible = state.opportunities.filter(
+    (item) => !item.title?.startsWith(BENEFIT_PREFIX) && (item.status !== "cancelled" || item.author_id === currentUser?.id || isAdmin())
+  );
   els.opportunityList.innerHTML = visible.length
     ? visible
         .map(

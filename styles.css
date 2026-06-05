@@ -110,6 +110,10 @@ nav a {
   transition: color 0.2s ease;
 }
 
+nav a.audience-hidden {
+  display: none;
+}
+
 nav a:hover {
   color: var(--green);
 }
@@ -267,6 +271,15 @@ h2 {
   gap: 12px;
 }
 
+.hero .hero-actions .button.secondary {
+  display: none;
+}
+
+.home-login-card {
+  max-width: 520px;
+  margin-top: 18px;
+}
+
 .trust-row {
   display: flex;
   flex-wrap: wrap;
@@ -284,6 +297,51 @@ h2 {
 
 .trust-row strong {
   color: var(--green);
+}
+
+.role-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 26px;
+}
+
+.role-card {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(12, 24, 42, 0.72);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.role-card:hover {
+  border-color: rgba(53, 240, 192, 0.42);
+  transform: translateY(-2px);
+}
+
+.role-card span {
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.role-card strong {
+  font-size: 18px;
+}
+
+.role-card small {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.user-side {
+  background: linear-gradient(135deg, rgba(53, 240, 192, 0.12), rgba(12, 24, 42, 0.72));
+}
+
+.operator-side {
+  background: linear-gradient(135deg, rgba(74, 163, 255, 0.13), rgba(12, 24, 42, 0.72));
 }
 
 .network-panel {
@@ -406,6 +464,8 @@ h2 {
 }
 
 .quick-start-section,
+.benefits-section,
+.benefit-offers-section,
 .opportunity-section,
 .admin-section,
 .directory,
@@ -413,6 +473,137 @@ h2 {
 .requests-section,
 .profile-section {
   background: linear-gradient(180deg, rgba(7, 11, 20, 0.28), rgba(7, 11, 20, 0.58));
+}
+
+.audience-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 0.7fr);
+  gap: 18px;
+  align-items: stretch;
+  margin-bottom: 18px;
+}
+
+.audience-hero > div:first-child,
+.benefit-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.16);
+}
+
+.audience-hero > div:first-child {
+  display: grid;
+  align-content: center;
+  gap: 14px;
+  padding: 26px;
+}
+
+.audience-hero h3 {
+  margin-bottom: 0;
+  font-size: clamp(26px, 3vw, 38px);
+}
+
+.audience-hero p,
+.benefit-card p {
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.benefit-radar {
+  display: grid;
+  gap: 12px;
+}
+
+.benefit-radar article {
+  padding: 18px;
+}
+
+.benefit-radar article {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 16px;
+  border: 1px solid rgba(53, 240, 192, 0.24);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(53, 240, 192, 0.1), rgba(74, 163, 255, 0.07));
+}
+
+.benefit-radar small,
+.benefit-card span {
+  color: var(--green);
+  font-weight: 900;
+}
+
+.benefit-radar strong {
+  font-size: 18px;
+}
+
+.benefit-radar span {
+  grid-row: span 2;
+  align-self: center;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.benefit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.benefit-workspace {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.62fr) 1fr;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+#benefits > .benefit-workspace {
+  display: none;
+}
+
+.benefit-workspace.single-form {
+  grid-template-columns: minmax(320px, 0.72fr) minmax(260px, 0.55fr);
+  align-items: stretch;
+}
+
+#profile > .section-heading:not(.profile-intro) {
+  display: none;
+}
+
+.benefit-match-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.benefit-card {
+  padding: 20px;
+}
+
+.benefit-card h3 {
+  margin-bottom: 8px;
+}
+
+.benefit-result {
+  display: grid;
+  gap: 12px;
+}
+
+.benefit-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.benefit-card-head strong {
+  color: var(--green);
+  font-size: 22px;
+}
+
+.compact-heading {
+  margin-bottom: 14px;
 }
 
 .quick-start-grid,
@@ -983,9 +1174,19 @@ footer strong {
   .quick-start-grid,
   .member-grid,
   .match-grid,
+  .benefit-grid,
   .form-grid,
   .admin-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .audience-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .benefit-workspace,
+  .benefit-match-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1005,6 +1206,10 @@ footer strong {
   .quick-start-grid,
   .member-grid,
   .match-grid,
+  .benefit-grid,
+  .role-switch,
+  .benefit-workspace,
+  .benefit-match-grid,
   .form-grid,
   .admin-grid {
     grid-template-columns: 1fr;

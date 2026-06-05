@@ -3,20 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Optionality Network｜台灣加密 KOL、社群、BD 與 Web3 合作媒合平台</title>
+    <title>Optionality Network｜加密福利中心與 Web3 成長媒合平台</title>
     <meta
       name="description"
-      content="Optionality Network 是加密產業合作媒合平台，幫助項目方、KOL、社群主、交易所 BD、聯盟推廣與 Web3 服務商快速找到合作資源。"
+      content="Optionality Network 結合 Crypto Benefits Hub 與 Web3 成長媒合平台，幫用戶找加密福利、低手續費、空投與工具，也幫經營者、BD、KOL 與社群主接需求、發活動、找合作。"
     />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://btc2049.github.io/optionality-network/" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="zh_TW" />
     <meta property="og:site_name" content="Optionality Network" />
-    <meta property="og:title" content="Optionality Network｜台灣加密 KOL、社群、BD 與 Web3 合作媒合平台" />
+    <meta property="og:title" content="Optionality Network｜加密福利中心與 Web3 成長媒合平台" />
     <meta
       property="og:description"
-      content="讓加密產業的人脈、資源與合作需求被看見。快速找到 KOL、Telegram 社群、交易所 BD、聯盟推廣與 AI 自動化夥伴。"
+      content="用戶找福利，經營者接需求。從低手續費、活動、空投、工具推薦到 KOL、社群與 BD 合作，讓加密需求兩端都更快成交。"
     />
     <meta property="og:url" content="https://btc2049.github.io/optionality-network/" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -26,7 +26,7 @@
         "@type": "WebSite",
         "name": "Optionality Network",
         "url": "https://btc2049.github.io/optionality-network/",
-        "description": "台灣加密產業合作媒合平台，協助 KOL、社群主、交易所 BD、聯盟推廣、項目方與 Web3 服務商找到合作資源。",
+        "description": "加密福利中心與 Web3 成長媒合平台，幫用戶找到低手續費、活動、空投與工具福利，也幫經營者、BD、KOL 與社群主接需求、發活動、找合作。",
         "inLanguage": "zh-Hant-TW",
         "potentialAction": {
           "@type": "SearchAction",
@@ -47,12 +47,18 @@
         </span>
       </a>
       <nav aria-label="主要導覽">
-        <a href="#members">會員探索</a>
-        <a href="#matches">智能配對</a>
-        <a href="#opportunities">發布需求</a>
-        <a href="#requests">合作請求</a>
-        <a href="#profile">我的頁面</a>
-        <a id="adminNavLink" class="hidden" href="#admin">後台</a>
+        <a href="#benefits" data-audience="user">福利首頁</a>
+        <a href="#benefit-explore" data-audience="user">福利探索</a>
+        <a href="#benefit-search" data-audience="user">設定需求</a>
+        <a href="#benefit-results" data-audience="user">福利配對</a>
+        <a href="#benefit-offers" data-audience="user">提供福利</a>
+        <a href="#profile" data-audience="user">建立經營者頁</a>
+        <a href="#members" data-audience="operator">會員探索</a>
+        <a href="#matches" data-audience="operator">智能配對</a>
+        <a href="#opportunities" data-audience="operator">發布需求</a>
+        <a href="#requests" data-audience="operator">合作請求</a>
+        <a href="#profile" data-audience="operator">個人頁面</a>
+        <a id="adminNavLink" class="hidden" href="#admin" data-audience="operator">後台</a>
       </nav>
       <button id="logoutButton" class="button ghost hidden" type="button">登出</button>
     </header>
@@ -68,6 +74,34 @@
           <div class="hero-actions">
             <a class="button primary" href="#quick-start">登入開始</a>
             <a class="button secondary" href="#members">先看會員</a>
+          </div>
+          <form id="loginForm" class="quick-card home-login-card">
+            <span>Login</span>
+            <h3>登入後開始使用</h3>
+            <p id="loginCardCopy">用 Email 收登入連結，或直接使用 Google 登入。</p>
+            <div id="loginControls" class="login-controls">
+              <input id="loginEmail" type="email" placeholder="name@email.com" required />
+              <button class="button primary wide" type="submit">寄送 Email 登入連結</button>
+              <button id="googleLoginButton" class="button secondary wide" type="button">使用 Google 登入</button>
+            </div>
+            <div id="loggedInActions" class="logged-in-actions hidden">
+              <strong>你已登入</strong>
+              <a class="button primary wide" href="#benefit-search">設定福利需求</a>
+              <a class="button secondary wide" href="#profile">建立經營者頁</a>
+            </div>
+            <small id="authMessage">登入後可以索取福利、發布需求、建立個人頁面。</small>
+          </form>
+          <div class="role-switch">
+            <a class="role-card user-side" href="#benefits">
+              <span>我是用戶</span>
+              <strong>找最低手續費、活動、空投與加密福利</strong>
+              <small>不是看資料庫，是幫自己省錢、拿回饋、找到更適合的工具。</small>
+            </a>
+            <a class="role-card operator-side" href="#members">
+              <span>我是經營者</span>
+              <strong>進入合作配對、發需求、接合作</strong>
+              <small>使用現有會員探索、智能配對、發布需求與合作請求功能經營你的資源。</small>
+            </a>
           </div>
           <div class="trust-row">
             <span><strong>先行動</strong> 不先逼填長表單</span>
@@ -105,6 +139,147 @@
         </div>
       </section>
 
+      <section id="benefits" class="benefits-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Crypto Benefits Hub</p>
+            <h2>加密福利中心</h2>
+          </div>
+          <p class="section-note">用戶來這裡是幫自己找到更低成本、更高回饋、更適合自己的加密工具與活動。</p>
+        </div>
+        <div class="audience-hero">
+          <div>
+            <span class="status new">用戶端</span>
+            <h3>先回答：我可以怎麼省錢或賺到更多？</h3>
+            <p>把交易所活動、空投任務、手續費優惠、工具折扣整理成可比較的福利入口。用戶先拿到好處，再由平台把需求媒合給合適經營者。</p>
+            <div class="hero-actions">
+              <a class="button primary" href="#benefit-search">設定我的需求</a>
+              <a class="button secondary" href="#benefit-results">查看福利配對</a>
+              <a class="button secondary" href="#home">返回身份選擇</a>
+            </div>
+          </div>
+          <div class="benefit-radar">
+            <article><small>交易成本</small><strong>找最低手續費</strong><span>Fee</span></article>
+            <article><small>活動回饋</small><strong>找新戶獎勵與限時福利</strong><span>Reward</span></article>
+            <article><small>成長機會</small><strong>找空投、任務與工具</strong><span>Airdrop</span></article>
+          </div>
+        </div>
+        <div class="benefit-grid">
+          <article class="benefit-card"><span>01</span><h3>最低手續費比較</h3><p>幫用戶比較交易成本、優惠條件、VIP 門檻與適合的交易所入口。</p></article>
+          <article class="benefit-card"><span>02</span><h3>活動與新戶福利</h3><p>整理開戶獎勵、交易活動、任務回饋與限時優惠，讓用戶知道現在去哪裡最划算。</p></article>
+          <article class="benefit-card"><span>03</span><h3>空投與任務雷達</h3><p>收集值得做的任務、工具試用與潛在空投機會，降低用戶自己找資訊的時間成本。</p></article>
+          <article class="benefit-card"><span>04</span><h3>工具推薦</h3><p>依照用戶是新手、交易者、擼毛、社群經營或項目方，推薦更適合的工具與服務。</p></article>
+          <article class="benefit-card"><span>05</span><h3>個人化配對</h3><p>用戶提出需求後，平台先保護聯絡資訊，再把需求媒合給合適的經營者。</p></article>
+          <article class="benefit-card"><span>06</span><h3>平台把關</h3><p>用戶不用直接暴露聯絡方式，合作與聯絡先透過平台請求，降低被亂私訊的風險。</p></article>
+        </div>
+        <div class="benefit-workspace">
+          <form id="benefitNeedFormHidden" class="post-card">
+            <h3>設定我要找的福利</h3>
+            <label>我最在意
+              <select id="benefitNeedTypeHidden">
+                <option>最低手續費</option>
+                <option>新戶活動</option>
+                <option>空投任務</option>
+                <option>工具優惠</option>
+                <option>交易活動</option>
+              </select>
+            </label>
+            <label>我的使用情境
+              <select id="benefitUserTypeHidden">
+                <option>新手入門</option>
+                <option>合約交易</option>
+                <option>現貨交易</option>
+                <option>空投任務</option>
+                <option>Web3 工具</option>
+              </select>
+            </label>
+            <label>大概交易量或預算<input id="benefitVolumeHidden" type="text" placeholder="例如 每月 5,000 USDT / 小額體驗" /></label>
+            <button class="button primary wide" type="submit">更新福利配對</button>
+          </form>
+          <div>
+            <div class="section-heading compact-heading">
+              <div>
+                <p class="eyebrow">Benefit Match</p>
+                <h2>適合你的福利</h2>
+              </div>
+            </div>
+            <div id="benefitMatchGrid" class="benefit-match-grid"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="benefit-explore" class="benefits-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Benefit Discovery</p>
+            <h2>福利探索</h2>
+          </div>
+          <p class="section-note">像會員探索一樣快速篩選福利。你可以找低手續費、開戶活動、空投任務、工具折扣，再透過平台向經營者索取。</p>
+        </div>
+        <div class="search-shell">
+          <input id="benefitExploreSearch" type="search" placeholder="搜尋低手續費、新戶福利、空投、工具、交易活動..." />
+          <div class="filters benefit-filters">
+            <button class="filter benefit-filter active" type="button" data-benefit-filter="all">全部</button>
+            <button class="filter benefit-filter" type="button" data-benefit-filter="最低手續費">最低手續費</button>
+            <button class="filter benefit-filter" type="button" data-benefit-filter="新戶福利">新戶福利</button>
+            <button class="filter benefit-filter" type="button" data-benefit-filter="空投任務">空投任務</button>
+            <button class="filter benefit-filter" type="button" data-benefit-filter="工具折扣">工具折扣</button>
+          </div>
+        </div>
+        <div id="benefitExploreGrid" class="benefit-match-grid"></div>
+      </section>
+
+      <section id="benefit-search" class="benefits-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Benefit Search</p>
+            <h2>設定你想找的福利</h2>
+          </div>
+          <p class="section-note">不用公開聯絡方式。先告訴平台你想找低手續費、活動、空投或工具，系統會幫你配對合適的福利提供方。</p>
+        </div>
+        <div class="benefit-workspace single-form">
+          <form id="benefitNeedForm" class="post-card">
+            <h3>我的福利需求</h3>
+            <label>我想找
+              <select id="benefitNeedType">
+                <option>最低手續費</option>
+                <option>新戶福利</option>
+                <option>空投任務</option>
+                <option>工具折扣</option>
+                <option>交易活動</option>
+              </select>
+            </label>
+            <label>我的使用情境
+              <select id="benefitUserType">
+                <option>新手入門</option>
+                <option>現貨交易</option>
+                <option>合約交易</option>
+                <option>空投任務</option>
+                <option>Web3 工具</option>
+              </select>
+            </label>
+            <label>大概交易量或預算<input id="benefitVolume" type="text" placeholder="例如 每月 5,000 USDT / 小額體驗" /></label>
+            <button class="button primary wide" type="submit">查看福利配對</button>
+          </form>
+          <article class="benefit-card">
+            <span>How it works</span>
+            <h3>先配對，再解鎖資訊</h3>
+            <p>你送出需求後，平台會先顯示合適方案。真正要聯繫時，會透過站內請求建立對話，雙方有興趣後才交換個人聯絡資訊。</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="benefit-results" class="benefits-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Benefit Match</p>
+            <h2>適合你的福利配對</h2>
+          </div>
+          <p class="section-note">這裡會依照你的需求排序。真人資料會優先顯示，讓真正能服務你的經營者先出現在前面。</p>
+        </div>
+        <div id="benefitMatchGridMain" class="benefit-match-grid"></div>
+      </section>
+
       <section id="quick-start" class="quick-start-section">
         <div class="section-heading">
           <div>
@@ -114,21 +289,21 @@
             <p class="section-note">登入後你可以先發布需求、發送請求。每個帳號最多 3 篇有效需求，撤銷後可再發布。</p>
         </div>
         <div class="quick-start-grid">
-          <form id="loginForm" class="quick-card">
+          <form id="quickLoginForm" class="quick-card">
             <span>Step 1</span>
             <h3>登入開始</h3>
-            <p id="loginCardCopy">用 Email 收登入連結，或直接用 Google 登入。</p>
-            <div id="loginControls" class="login-controls">
-              <input id="loginEmail" type="email" placeholder="name@email.com" required />
+            <p>用 Email 收登入連結，或直接用 Google 登入。</p>
+            <div class="login-controls">
+              <input type="email" placeholder="name@email.com" />
               <button class="button primary wide" type="submit">寄送 Email 登入連結</button>
-              <button id="googleLoginButton" class="button secondary wide" type="button">使用 Google 登入</button>
+              <button class="button secondary wide" type="button">使用 Google 登入</button>
             </div>
-            <div id="loggedInActions" class="logged-in-actions hidden">
+            <div class="logged-in-actions hidden">
               <strong>你已登入</strong>
               <a class="button primary wide" href="#opportunities">發布需求</a>
               <a class="button secondary wide" href="#profile">補會員頁</a>
             </div>
-            <small id="authMessage">登入後就可以發布需求和發送合作請求。</small>
+            <small>登入後就可以發布需求和發送合作請求。</small>
           </form>
           <article class="quick-card">
             <span>Step 2</span>
@@ -148,8 +323,8 @@
       <section id="members" class="directory">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Discovery</p>
-            <h2>搜尋會員與資源</h2>
+            <p class="eyebrow">Operator Network</p>
+            <h2>經營者合作配對</h2>
           </div>
           <p class="section-note">搜尋「台灣 KOL」、「Telegram 社群」、「交易所合作」、「AI 自動化」等關鍵字。公開頁只顯示資源與合作條件，對方接受合作請求後即可解鎖個人資訊。</p>
         </div>
@@ -187,6 +362,52 @@
         <div id="matchGrid" class="match-grid"></div>
       </section>
 
+      <section id="benefit-offers" class="benefit-offers-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Benefit Offer</p>
+            <h2>設定你能提供的福利</h2>
+          </div>
+          <p class="section-note">給代理、項目方、交易所 BD、社群主與服務商使用。你可以設定可提供的活動、優惠、工具或合作福利，讓用戶端依需求配對。</p>
+        </div>
+        <div class="benefit-workspace">
+          <form id="benefitOfferForm" class="post-card">
+            <h3>發布福利</h3>
+            <label>福利名稱<input id="offerTitle" type="text" value="交易手續費優惠方案" required /></label>
+            <label>福利類型
+              <select id="offerType">
+                <option>最低手續費</option>
+                <option>新戶活動</option>
+                <option>空投任務</option>
+                <option>工具優惠</option>
+                <option>交易活動</option>
+              </select>
+            </label>
+            <label>適合誰
+              <select id="offerAudience">
+                <option>新手入門</option>
+                <option>合約交易</option>
+                <option>現貨交易</option>
+                <option>空投任務</option>
+                <option>Web3 工具</option>
+              </select>
+            </label>
+            <label>福利說明<textarea id="offerDesc" required>適合想降低交易成本的新用戶，可透過平台提出需求後進一步了解條件。</textarea></label>
+            <label>亮點<input id="offerValue" type="text" value="低門檻、站內媒合、接受後解鎖細節" required /></label>
+            <button class="button primary wide" type="submit">發布福利</button>
+          </form>
+          <div>
+            <div class="section-heading compact-heading">
+              <div>
+                <p class="eyebrow">Live Offers</p>
+                <h2>目前福利池</h2>
+              </div>
+            </div>
+            <div id="benefitOfferList" class="benefit-match-grid"></div>
+          </div>
+        </div>
+      </section>
+
       <section id="opportunities" class="opportunity-section">
         <div class="section-heading">
           <div>
@@ -221,6 +442,13 @@
       </section>
 
       <section id="profile" class="profile-section">
+        <div class="section-heading profile-intro">
+          <div>
+            <p class="eyebrow">Operator Profile</p>
+            <h2>建立經營者個人頁</h2>
+          </div>
+          <p class="section-note">代理、項目方、交易所 BD、KOL、社群主都可以在這裡建立自己的資源頁。你的能力會被看見，但私人聯絡方式不會公開；對方提出合作請求，且你接受後，才進一步解鎖個人資訊。</p>
+        </div>
         <div class="section-heading">
           <div>
             <p class="eyebrow">My Profile</p>
@@ -235,6 +463,9 @@
             <label>國家/地區<input id="country" type="text" placeholder="台灣" required /></label>
             <label>你的角色
               <select id="title">
+                <option>代理</option>
+                <option>項目方</option>
+                <option>交易所 BD</option>
                 <option>加密聯盟推廣者</option>
                 <option>交易所商務拓展</option>
                 <option>社群經理</option>
@@ -300,6 +531,7 @@
       <strong>Optionality Network</strong>
       <span>The LinkedIn of Crypto Growth</span>
       <div class="seo-footer-links" aria-label="熱門合作需求">
+        <a href="./crypto-benefits-hub.html">加密福利中心</a>
         <a href="./taiwan-crypto-kol.html">台灣加密 KOL</a>
         <a href="./crypto-affiliate-network.html">加密聯盟推廣</a>
         <a href="./telegram-crypto-community.html">Telegram 加密社群</a>
