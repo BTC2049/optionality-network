@@ -356,6 +356,7 @@ h2 {
 .opportunity-section,
 .admin-section,
 .directory,
+.matches-section,
 .requests-section,
 .profile-section {
   background: linear-gradient(180deg, rgba(7, 11, 20, 0.28), rgba(7, 11, 20, 0.58));
@@ -363,6 +364,7 @@ h2 {
 
 .quick-start-grid,
 .member-grid,
+.match-grid,
 .admin-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -490,6 +492,24 @@ label {
   display: grid;
   gap: 14px;
   padding: 20px;
+}
+
+.match-result {
+  border-color: rgba(53, 240, 192, 0.28);
+  background:
+    linear-gradient(135deg, rgba(53, 240, 192, 0.08), rgba(74, 163, 255, 0.06)),
+    var(--panel);
+}
+
+.match-score {
+  margin-left: auto;
+  padding: 8px 10px;
+  border: 1px solid rgba(53, 240, 192, 0.35);
+  border-radius: 999px;
+  color: var(--green);
+  background: rgba(53, 240, 192, 0.08);
+  font-size: 14px;
+  white-space: nowrap;
 }
 
 .member-top {
@@ -881,6 +901,7 @@ footer strong {
 
   .quick-start-grid,
   .member-grid,
+  .match-grid,
   .form-grid,
   .admin-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -902,6 +923,7 @@ footer strong {
 
   .quick-start-grid,
   .member-grid,
+  .match-grid,
   .form-grid,
   .admin-grid {
     grid-template-columns: 1fr;

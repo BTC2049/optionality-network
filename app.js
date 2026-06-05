@@ -99,11 +99,14 @@ const seed = {
   messages: [],
 };
 
+const showcaseMembers = createShowcaseMembers();
+
 let state = loadDemoState();
 state.members ||= [];
 state.opportunities ||= [];
 state.requests ||= [];
 state.messages ||= [];
+state.members = mergeDisplayMembers(state.members);
 let currentUser = null;
 let currentProfile = null;
 let activeFilter = "all";
@@ -111,6 +114,127 @@ let pendingIntent = null;
 let activeRequestId = null;
 let realtimeChannel = null;
 let realtimeRefreshTimer = null;
+
+function createShowcaseMembers() {
+  const names = [
+    "Alex Chen",
+    "Sofia Lin",
+    "Kenji Mori",
+    "Ivy Wang",
+    "Marcus Lee",
+    "Nina Ho",
+    "Jason Wu",
+    "Maya Chou",
+    "Daniel Park",
+    "Hana Kim",
+    "Ethan Zhao",
+    "Luna Tsai",
+    "Victor Ng",
+    "Grace Liu",
+    "Owen Tan",
+    "Rina Kuo",
+    "Leo Huang",
+    "Aria Yu",
+    "Noah Fang",
+    "Mika Sato",
+    "Chris Yang",
+    "Tina Hsieh",
+    "Raymond Lau",
+    "Elaine Chang",
+    "Kevin Ma",
+    "Yuki Chen",
+    "Sam Lin",
+    "Joanna Wu",
+    "Brian Choi",
+    "Peggy Kao",
+    "Oscar Li",
+    "Alice Sun",
+    "George Yeh",
+    "Cindy Luo",
+    "Felix Chiu",
+    "Ruby Shen",
+    "Howard Pan",
+    "Kelly Wong",
+    "Aaron Hsu",
+    "Mia Tang",
+    "Derek Lam",
+    "Claire Fu",
+    "Tony Cheng",
+    "Wendy Lai",
+    "Ivan Ko",
+    "Phoebe Lu",
+    "Sean Yu",
+    "Irene Fang",
+    "Martin Chu",
+    "Bonnie Tseng",
+    "Eric Han",
+    "Janice Wei",
+    "Louis Hwang",
+  ];
+  const roles = [
+    "加密 KOL",
+    "交易所 BD",
+    "社群主",
+    "聯盟推廣負責人",
+    "交易講師",
+    "鏈上分析師",
+    "媒體合作夥伴",
+    "項目方創辦人",
+    "VC 投資人",
+    "Web3 開發者",
+    "AI 自動化服務商",
+    "影片剪輯師",
+    "平面設計師",
+  ];
+  const countries = ["台灣", "香港", "新加坡", "日本", "韓國", "馬來西亞", "泰國", "越南", "美國", "英國"];
+  const resourcesHave = [
+    ["Telegram 社群", "Twitter/X 受眾", "KOL 人脈"],
+    ["交易所資源", "聯盟推廣人脈", "項目方資源"],
+    ["Discord 社群", "交易社群", "社群經營"],
+    ["媒體網絡", "SEO", "內容企劃"],
+    ["AI 自動化", "客服支援", "資料整理"],
+    ["影片剪輯", "圖像設計", "短影音製作"],
+    ["VC 連結", "項目資源", "募資人脈"],
+    ["開發者", "產品設計", "技術顧問"],
+  ];
+  const resourcesNeed = [
+    ["KOL 推廣", "媒體曝光", "Telegram 社群"],
+    ["交易所合作", "聯盟推廣夥伴", "項目合作"],
+    ["社群經理", "交易講師", "客服支援"],
+    ["開發者", "設計師", "AI 自動化"],
+    ["影片剪輯", "SEO", "付費流量"],
+    ["VC 連結", "媒體曝光", "活動合作"],
+    ["翻譯", "內容企劃", "社群經營"],
+  ];
+
+  return names.map((name, index) => {
+    const number = index + 1;
+    const role = roles[index % roles.length];
+    const country = countries[(index * 3) % countries.length];
+    const have = resourcesHave[index % resourcesHave.length];
+    const need = resourcesNeed[(index + 2) % resourcesNeed.length];
+    return {
+      id: `showcase-${String(number).padStart(2, "0")}`,
+      email: `showcase-${number}@optionality.network`,
+      username: `showcase-${String(number).padStart(2, "0")}`,
+      full_name: name,
+      title: role,
+      country,
+      languages: country === "日本" ? ["日文", "英文"] : country === "韓國" ? ["韓文", "英文"] : ["中文", "英文"],
+      bio: `${country} ${role}，可協助${have.slice(0, 2).join("、")}，正在尋找${need.slice(0, 2).join("、")}。`,
+      telegram: `@showcase${number}`,
+      twitter: `@showcase${number}`,
+      resources_have: have,
+      resources_need: need,
+      profile_views: 84 + ((index * 37) % 220),
+      connections: 12 + ((index * 11) % 48),
+      completed_partnerships: 2 + ((index * 5) % 14),
+      member_since: "2026-06-01",
+      created_at: "2026-06-01T00:00:00.000Z",
+      is_showcase_member: true,
+    };
+  });
+}
 
 const els = {
   logoutButton: document.querySelector("#logoutButton"),
@@ -124,6 +248,7 @@ const els = {
   profileForm: document.querySelector("#profileForm"),
   memberGrid: document.querySelector("#memberGrid"),
   memberSearch: document.querySelector("#memberSearch"),
+  matchGrid: document.querySelector("#matchGrid"),
   opportunityForm: document.querySelector("#opportunityForm"),
   opportunityList: document.querySelector("#opportunityList"),
   requestInbox: document.querySelector("#requestInbox"),
@@ -253,6 +378,7 @@ function renderApp() {
   updateAdminVisibility();
   fillProfileForm(currentProfile);
   renderMembers();
+  renderMatches();
   renderOpportunities();
   renderRequests();
   renderProfile();
@@ -307,10 +433,30 @@ async function loadCloudData() {
       : Promise.resolve({ data: [] }),
   ]);
 
-  state.members = members || [];
+  state.members = mergeDisplayMembers(members || []);
   state.opportunities = opportunities || [];
   state.requests = requests || [];
   state.messages = messages || [];
+}
+
+function mergeDisplayMembers(realMembers) {
+  const realIds = new Set(realMembers.map((member) => member.id));
+  const realUsernames = new Set(realMembers.map((member) => member.username));
+  const enrichedRealMembers = realMembers.map((member, index) => enrichMemberStats({ ...member, is_showcase_member: false }, index));
+  const visibleShowcaseMembers = showcaseMembers.filter((member) => !realIds.has(member.id) && !realUsernames.has(member.username));
+  return [...enrichedRealMembers, ...visibleShowcaseMembers];
+}
+
+function enrichMemberStats(member, index = 0) {
+  const seedText = `${member.id || ""}${member.username || ""}${member.email || ""}`;
+  const base = Array.from(seedText).reduce((sum, char) => sum + char.charCodeAt(0), 0) + index * 17;
+  return {
+    ...member,
+    profile_views: member.profile_views && member.profile_views > 0 ? member.profile_views : 38 + (base % 160),
+    connections: member.connections && member.connections > 0 ? member.connections : 6 + (base % 34),
+    completed_partnerships:
+      member.completed_partnerships && member.completed_partnerships > 0 ? member.completed_partnerships : 1 + (base % 8),
+  };
 }
 
 function findCurrentProfile() {
@@ -515,6 +661,12 @@ async function handleDocumentClick(event) {
     return;
   }
 
+  const showcaseConnectButton = event.target.closest("[data-showcase-connect]");
+  if (showcaseConnectButton) {
+    await createShowcaseRequest(showcaseConnectButton.dataset.showcaseConnect);
+    return;
+  }
+
   const opportunityButton = event.target.closest("[data-opportunity]");
   if (opportunityButton) {
     await createOpportunityRequest(opportunityButton.dataset.opportunity);
@@ -555,6 +707,30 @@ async function createRequest(receiverId) {
   }
 
   await saveRequest(request);
+}
+
+async function createShowcaseRequest(showcaseId) {
+  if (!currentUser) return askLoginFirst("先用 Email 登入，就能發送合作請求");
+
+  const showcaseMember = state.members.find((member) => member.id === showcaseId);
+  const routeTarget = getShowcaseRouteTarget();
+  if (!routeTarget) return showToast("目前沒有可接收的真人窗口，請稍後再試");
+  if (routeTarget.id === currentUser.id) return showToast("這筆配對會由你的帳號承接");
+
+  const request = {
+    sender_id: currentProfile?.id || currentUser.id,
+    receiver_id: routeTarget.id,
+    message: `我想找 ${showcaseMember?.full_name || "這位會員"} 這類資源：${showcaseMember?.resources_have?.slice(0, 3).join("、") || "加密產業合作"}。請協助媒合。`,
+    status: "pending",
+  };
+
+  await saveRequest(request);
+}
+
+function getShowcaseRouteTarget() {
+  const adminProfile = state.members.find((member) => !member.is_showcase_member && adminEmails.includes(member.email));
+  if (adminProfile && adminProfile.id !== currentUser?.id) return adminProfile;
+  return state.members.find((member) => !member.is_showcase_member && member.id !== currentUser?.id) || null;
 }
 
 async function saveRequest(request) {
@@ -689,6 +865,63 @@ function renderMembers() {
     : '<article class="member-card"><h3>沒有找到符合條件的會員</h3><p>試試搜尋 KOL、台灣、Telegram 社群、交易所合作或 AI 自動化。</p></article>';
 }
 
+function renderMatches() {
+  if (!els.matchGrid) return;
+
+  const matches = getRecommendedMembers().slice(0, 6);
+  els.matchGrid.innerHTML = matches.length
+    ? matches.map(matchCard).join("")
+    : '<article class="member-card"><h3>還沒有足夠資料配對</h3><p>先補上你的會員頁，系統就能依照你的資源與需求推薦人選。</p></article>';
+}
+
+function getRecommendedMembers() {
+  const myHave = new Set(currentProfile?.resources_have || []);
+  const myNeed = new Set(currentProfile?.resources_need || []);
+
+  return state.members
+    .filter((member) => member.id !== currentUser?.id)
+    .map((member) => {
+      const theyHave = member.resources_have || [];
+      const theyNeed = member.resources_need || [];
+      const needMatches = theyHave.filter((item) => myNeed.has(item));
+      const giveMatches = theyNeed.filter((item) => myHave.has(item));
+      const keywordScore = currentProfile ? needMatches.length * 18 + giveMatches.length * 12 : 0;
+      const activityScore = Math.min(18, Math.round(((member.connections || 0) + (member.completed_partnerships || 0) * 2) / 8));
+      const realPriority = member.is_showcase_member ? 0 : 1000;
+      const score = realPriority + keywordScore + activityScore;
+      const percent = Math.min(96, Math.max(68, 68 + keywordScore + activityScore + (member.is_showcase_member ? 0 : 6)));
+      const reasons = [...needMatches, ...giveMatches].slice(0, 3);
+      return { member, score, percent, reasons };
+    })
+    .sort((a, b) => b.score - a.score || b.percent - a.percent);
+}
+
+function matchCard(match) {
+  const { member, percent, reasons } = match;
+  const reasonText = reasons.length ? reasons.join("、") : `${member.resources_have?.slice(0, 2).join("、") || "資源互補"}`;
+  return `
+    <article class="member-card match-result">
+      <div class="member-top">
+        <span class="avatar">${initials(member.full_name)}</span>
+        <div>
+          <h3>${escapeHtml(member.full_name)}</h3>
+          <small>${escapeHtml(member.title)} · ${escapeHtml(member.country)}</small>
+        </div>
+        <strong class="match-score">${percent}%</strong>
+      </div>
+      <p>推薦原因：${escapeHtml(reasonText)}</p>
+      <div class="tag-list">${tags(member.resources_have)}</div>
+      <div class="row-actions">
+        <button class="button secondary" type="button" data-profile="${escapeHtml(member.username)}">查看頁面</button>
+        ${
+          member.is_showcase_member
+            ? `<button class="button primary" type="button" data-showcase-connect="${member.id}">建立連結</button>`
+            : `<button class="button primary" type="button" data-connect="${member.id}">建立連結</button>`
+        }
+      </div>
+    </article>`;
+}
+
 function memberCard(member) {
   return `
     <article class="member-card">
@@ -709,7 +942,11 @@ function memberCard(member) {
       </div>
       <div class="row-actions">
         <button class="button secondary" type="button" data-profile="${escapeHtml(member.username)}">查看頁面</button>
-        <button class="button primary" type="button" data-connect="${member.id}">建立連結</button>
+        ${
+          member.is_showcase_member
+            ? `<button class="button primary" type="button" data-showcase-connect="${member.id}">建立連結</button>`
+            : `<button class="button primary" type="button" data-connect="${member.id}">建立連結</button>`
+        }
       </div>
     </article>`;
 }
