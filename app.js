@@ -214,6 +214,16 @@ function createShowcaseMembers() {
     const country = "台灣";
     const have = resourcesHave[index % resourcesHave.length];
     const need = resourcesNeed[(index + 2) % resourcesNeed.length];
+    const bioTemplates = [
+      `長期經營台灣加密圈資源，熟悉${have[0]}與${have[1]}合作節奏，正在尋找${need[0]}。`,
+      `偏實戰型合作窗口，可協助${have[0]}、${have[2]}，適合有明確檔期與目標的項目方。`,
+      `資源集中在台灣市場，能支援${have[1]}與${have[2]}，目前希望串接${need[1]}。`,
+      `過去常協助 Web3 團隊做早期曝光、社群溝通與合作導流，主要資源是${have[0]}。`,
+      `重視合作品質，不只接曝光，也會先確認受眾、預算與成效目標。可提供${have[0]}與${have[1]}。`,
+      `適合想快速驗證台灣市場反應的團隊，能從${have[2]}開始建立合作測試。`,
+      `熟悉項目方、社群與推廣方之間的溝通方式，可協助媒合${need[0]}與${need[2]}。`,
+      `手上有穩定合作窗口，偏好長期互惠，不適合一次性亂投放。主要資源：${have.join("、")}。`,
+    ];
     return {
       id: `showcase-${String(number).padStart(2, "0")}`,
       email: `showcase-${number}@optionality.network`,
@@ -222,7 +232,7 @@ function createShowcaseMembers() {
       title: role,
       country,
       languages: ["中文", "英文"],
-      bio: `${country} ${role}，可協助${have.slice(0, 2).join("、")}，正在尋找${need.slice(0, 2).join("、")}。`,
+      bio: bioTemplates[index % bioTemplates.length],
       telegram: `@showcase${number}`,
       twitter: `@showcase${number}`,
       resources_have: have,
@@ -936,9 +946,30 @@ function publicMemberSummary(member) {
   const have = member.resources_have || [];
   const primary = have[0] || "加密產業資源";
   const secondary = have[1] || "合作網絡";
-  const volume = 120 + (Math.abs(hashText(member.username || member.id || primary)) % 880);
+  const third = have[2] || "成長合作";
+  const need = member.resources_need || [];
+  const wanted = need[0] || "合適合作方";
+  const base = Math.abs(hashText(member.username || member.id || primary));
+  const volume = 120 + (base % 880);
+  const communitySize = 1800 + (base % 13200);
+  const monthlyVolume = 80 + (base % 720);
+  const responseHours = 2 + (base % 22);
+  const templates = [
+    `手上有${primary}與${secondary}，過去常協助項目做上市前暖場、社群導流與初期口碑測試。適合先用平台確認合作方向。`,
+    `偏向實戰型資源方，能提供${primary}、${secondary}，目前主要尋找${wanted}。對方接受後可再交換完整聯絡方式。`,
+    `具備約 ${communitySize.toLocaleString("zh-TW")} 人規模的垂直受眾，擅長把${third}轉成可執行的推廣節奏。`,
+    `熟悉台灣加密圈合作流程，可支援${primary}與${secondary}，比較適合有明確預算、檔期或成長目標的需求。`,
+    `月觸及約 ${volume.toLocaleString("zh-TW")}K+，內容與社群互動穩定，適合新品曝光、活動導流或長期合作測試。`,
+    `資源偏精準，不主打大量曝光；擅長用${primary}連到對的人，合作前會先確認受眾、檔期與轉換目標。`,
+    `可協助${primary}相關需求，通常 ${responseHours} 小時內回覆站內請求。接受合作後再開放更多個人資訊。`,
+    `過去合作多以${secondary}與${wanted}為主，適合想先低成本驗證市場反應的 Web3 團隊。`,
+    `具備台灣市場在地觸點，能協助${primary}、${third}與初步合作評估，適合需要快速找窗口的 BD 或項目方。`,
+    `偏長期型合作資源，重視雙方是否互補；若需求明確，可透過平台先交換合作目的與基本條件。`,
+    `可處理約 ${monthlyVolume.toLocaleString("zh-TW")} 萬 USDT 等級的交易/推廣相關需求評估，適合交易所、社群與聯盟合作。`,
+    `擅長把${primary}包裝成可落地的合作方案，包含節奏安排、內容切角與合作後追蹤。`,
+  ];
   if (member.id === currentUser?.id) return member.bio || "這是你的會員頁。";
-  return `擁有${primary}與${secondary}，可透過平台提出合作需求。估計月觸及 ${volume.toLocaleString("zh-TW")}K+。`;
+  return templates[base % templates.length];
 }
 
 function hashText(text = "") {
