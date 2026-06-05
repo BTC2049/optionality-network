@@ -201,6 +201,7 @@ function saveDemoState() {
 
 async function refreshAll() {
   els.logoutButton.classList.toggle("hidden", !currentUser || !supabaseClient);
+  await ensureCurrentUserProfile();
   await loadCloudData();
   currentProfile = findCurrentProfile();
   updateAdminVisibility();
@@ -254,6 +255,35 @@ async function loadCloudData() {
 function findCurrentProfile() {
   if (!currentUser) return null;
   return state.members.find((member) => member.id === currentUser.id || member.email === currentUser.email) || null;
+}
+
+async function ensureCurrentUserProfile() {
+  if (!supabaseClient || !currentUser) return;
+
+  const { data: existing } = await supabaseClient
+    .from("profiles")
+    .select("id")
+    .eq("id", currentUser.id)
+    .maybeSingle();
+
+  if (existing) return;
+
+  const emailName = (currentUser.email || "member").split("@")[0];
+  const baseUsername = cleanUsername(emailName) || `member-${currentUser.id.slice(0, 6)}`;
+  const fallbackName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || emailName;
+
+  await supabaseClient.from("profiles").insert({
+    id: currentUser.id,
+    email: currentUser.email,
+    username: `${baseUsername}-${currentUser.id.slice(0, 6)}`,
+    full_name: fallbackName,
+    title: "加密產業成員",
+    country: "未填寫",
+    languages: ["中文"],
+    bio: "我正在建立 Optionality Network 會員頁。",
+    resources_have: [],
+    resources_need: [],
+  });
 }
 
 function isAdmin() {
@@ -467,13 +497,17 @@ async function createRequest(receiverId) {
 }
 
 async function saveRequest(request) {
+  let requestId = null;
+
   if (supabaseClient) {
     const { data, error } = await supabaseClient.from("partnership_requests").insert(request).select("id").single();
     if (error) return showToast("請求送出失敗，請稍後再試");
+    requestId = data?.id || null;
     if (data?.id) await sendMessage(data.id, request.message, { silent: true });
   } else {
     const receiver = state.members.find((member) => member.id === request.receiver_id);
     const id = `demo-req-${Date.now()}`;
+    requestId = id;
     state.requests.unshift({ ...request, id, receiver, created_at: new Date().toISOString() });
     state.messages.push({
       id: `demo-msg-${Date.now()}`,
@@ -489,6 +523,7 @@ async function saveRequest(request) {
   pendingIntent = null;
   await refreshAll();
   location.hash = "requests";
+  if (requestId) openMessageModal(requestId);
 }
 
 async function createOpportunityRequest(opportunityId) {
