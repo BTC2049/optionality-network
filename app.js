@@ -158,7 +158,7 @@ function wireEvents() {
 }
 
 async function initCloudMode() {
-  els.authMessage.textContent = "輸入 Email 後，我們會寄送登入連結。";
+  els.authMessage.textContent = "你可以用 Email 登入連結，或直接使用 Google 登入。";
   const { data } = await supabaseClient.auth.getSession();
   currentUser = data.session?.user || null;
   supabaseClient.auth.onAuthStateChange(async (_event, session) => {
@@ -168,7 +168,7 @@ async function initCloudMode() {
 }
 
 function initDemoMode() {
-  els.authMessage.textContent = "輸入 Email 後即可開始體驗。";
+  els.authMessage.textContent = "登入後就可以發布需求和發送合作請求。";
   currentUser = { id: "demo-user", email: "demo@optionality.network" };
 }
 
@@ -256,10 +256,26 @@ async function handleGoogleLogin() {
     showToast("目前請先使用 Email 登入");
     return;
   }
-  await supabaseClient.auth.signInWithOAuth({
+
+  els.googleLoginButton.disabled = true;
+  els.googleLoginButton.textContent = "正在前往 Google...";
+  showToast("正在前往 Google 登入");
+
+  const { error } = await supabaseClient.auth.signInWithOAuth({
     provider: "google",
-    options: { redirectTo: window.location.origin + window.location.pathname },
+    options: {
+      redirectTo: getAuthRedirectUrl(),
+      queryParams: {
+        prompt: "select_account",
+      },
+    },
   });
+
+  if (error) {
+    els.googleLoginButton.disabled = false;
+    els.googleLoginButton.textContent = "使用 Google 登入";
+    showToast("Google 登入尚未開通，請先使用 Email 登入");
+  }
 }
 
 async function handleLogout() {
@@ -449,6 +465,10 @@ async function approveProfile(id) {
 function askLoginFirst(message) {
   showToast(message);
   location.hash = "quick-start";
+}
+
+function getAuthRedirectUrl() {
+  return `${window.location.origin}${window.location.pathname}`;
 }
 
 function askProfileLater(message) {
