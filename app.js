@@ -516,17 +516,23 @@ async function createRequest(receiverId) {
 
 async function saveRequest(request) {
   let requestId = null;
+  let pendingRequest = null;
 
   if (supabaseClient) {
-    const { data, error } = await supabaseClient.from("partnership_requests").insert(request).select("id").single();
+    requestId = crypto.randomUUID();
+    const cloudRequest = { ...request, id: requestId };
+    const { error } = await supabaseClient.from("partnership_requests").insert(cloudRequest);
     if (error) return showToast("請求送出失敗，請稍後再試");
-    requestId = data?.id || null;
-    if (data?.id) await sendMessage(data.id, request.message, { silent: true });
+    const receiver = state.members.find((member) => member.id === request.receiver_id);
+    pendingRequest = { ...cloudRequest, receiver, created_at: new Date().toISOString() };
+    state.requests.unshift(pendingRequest);
+    await sendMessage(requestId, request.message, { silent: true });
   } else {
     const receiver = state.members.find((member) => member.id === request.receiver_id);
     const id = `demo-req-${Date.now()}`;
     requestId = id;
-    state.requests.unshift({ ...request, id, receiver, created_at: new Date().toISOString() });
+    pendingRequest = { ...request, id, receiver, created_at: new Date().toISOString() };
+    state.requests.unshift(pendingRequest);
     state.messages.push({
       id: `demo-msg-${Date.now()}`,
       request_id: id,
@@ -540,6 +546,10 @@ async function saveRequest(request) {
   showToast("合作請求已送出");
   pendingIntent = null;
   await refreshAll();
+  if (pendingRequest && !state.requests.some((item) => item.id === pendingRequest.id)) {
+    state.requests.unshift(pendingRequest);
+    render();
+  }
   location.hash = "requests";
   if (requestId) openMessageModal(requestId);
 }
