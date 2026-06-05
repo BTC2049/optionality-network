@@ -109,6 +109,8 @@ let currentProfile = null;
 let activeFilter = "all";
 let pendingIntent = null;
 let activeRequestId = null;
+let realtimeChannel = null;
+let realtimeRefreshTimer = null;
 
 const els = {
   logoutButton: document.querySelector("#logoutButton"),
@@ -147,6 +149,7 @@ async function init() {
   if (supabaseClient) await initCloudMode();
   else initDemoMode();
   await refreshAll();
+  setupRealtimeSubscription();
 }
 
 function wireEvents() {
@@ -185,12 +188,48 @@ async function initCloudMode() {
   supabaseClient.auth.onAuthStateChange(async (_event, session) => {
     currentUser = session?.user || null;
     await refreshAll();
+    setupRealtimeSubscription();
   });
 }
 
 function initDemoMode() {
   els.authMessage.textContent = "登入後就可以發布需求和發送合作請求。";
   currentUser = { id: "demo-user", email: "demo@optionality.network" };
+}
+
+function setupRealtimeSubscription() {
+  if (!supabaseClient) return;
+
+  if (realtimeChannel) {
+    supabaseClient.removeChannel(realtimeChannel);
+    realtimeChannel = null;
+  }
+
+  if (!currentUser) return;
+
+  realtimeChannel = supabaseClient
+    .channel(`optionality-network-${currentUser.id}`)
+    .on("postgres_changes", { event: "*", schema: "public", table: "partnership_requests" }, handleRealtimeChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "partnership_messages" }, handleRealtimeChange)
+    .subscribe();
+}
+
+function handleRealtimeChange(payload) {
+  if (!currentUser) return;
+
+  const incomingMessage =
+    payload.table === "partnership_messages" &&
+    payload.eventType === "INSERT" &&
+    payload.new?.sender_id !== currentUser.id;
+
+  window.clearTimeout(realtimeRefreshTimer);
+  realtimeRefreshTimer = window.setTimeout(async () => {
+    await loadCloudData();
+    currentProfile = findCurrentProfile();
+    renderApp();
+    if (activeRequestId) renderMessageThread();
+    if (incomingMessage && !activeRequestId) showToast("你收到一則新的合作訊息");
+  }, 300);
 }
 
 function loadDemoState() {
@@ -207,6 +246,10 @@ async function refreshAll() {
   await ensureCurrentUserProfile();
   await loadCloudData();
   currentProfile = findCurrentProfile();
+  renderApp();
+}
+
+function renderApp() {
   updateAdminVisibility();
   fillProfileForm(currentProfile);
   renderMembers();
@@ -548,7 +591,7 @@ async function saveRequest(request) {
   await refreshAll();
   if (pendingRequest && !state.requests.some((item) => item.id === pendingRequest.id)) {
     state.requests.unshift(pendingRequest);
-    render();
+    renderApp();
   }
   location.hash = "requests";
   if (requestId) openMessageModal(requestId);
