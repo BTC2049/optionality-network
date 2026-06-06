@@ -638,7 +638,7 @@ function defaultBenefitOffers() {
 
 function getBenefitOffers() {
   const catalogOffers = (state.catalogBenefits || [])
-    .filter((item) => item.status === "active" && (!item.expires_at || new Date(item.expires_at) > new Date()))
+    .filter((item) => !item.is_automated && item.status === "active" && (!item.expires_at || new Date(item.expires_at) > new Date()))
     .map((item) => ({
     id: item.id,
     title: item.title,
@@ -775,7 +775,7 @@ function analyzeBenefitMatch(offer, need) {
 
   if (offer.source === "catalog" && offer.source_url) {
     score += 6;
-    reasons.push("可查驗官方來源");
+    reasons.push("可查驗公開來源");
   } else if (offer.provider_id || offer.provider) {
     score += 3;
   }
@@ -803,7 +803,7 @@ function benefitRank(offer, need) {
 }
 
 function sortBenefitOffers(offers, need) {
-  return offers
+  const sorted = offers
     .map((offer) => {
       const analysis = analyzeBenefitMatch(offer, need);
       return {
@@ -814,6 +814,29 @@ function sortBenefitOffers(offers, need) {
       };
     })
     .sort((a, b) => b.rank - a.rank || new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  return diversifyBenefitSources(sorted);
+}
+
+function diversifyBenefitSources(offers) {
+  const result = [];
+  const deferred = [];
+  const sourceCounts = new Map();
+  const categoryCounts = new Map();
+
+  offers.forEach((offer) => {
+    const source = offer.provider || offer.source || "其他來源";
+    const sourceCount = sourceCounts.get(source) || 0;
+    const categoryCount = categoryCounts.get(offer.type) || 0;
+    if (sourceCount < 3 && categoryCount < 5) {
+      result.push(offer);
+      sourceCounts.set(source, sourceCount + 1);
+      categoryCounts.set(offer.type, categoryCount + 1);
+    } else {
+      deferred.push(offer);
+    }
+  });
+
+  return [...result, ...deferred];
 }
 
 function renderBenefitMatches() {
@@ -874,7 +897,7 @@ function benefitCard(offer) {
         <span>${escapeHtml(offer.audience)}</span>
         <span>${escapeHtml(offer.value)}</span>
         <span>${escapeHtml(offer.provider || "平台經營者")}</span>
-        ${offer.source === "catalog" ? `<span>官方來源 · ${dateText(offer.published_at || offer.created_at)}</span>` : ""}
+        ${offer.source === "catalog" ? `<span>公開來源 · ${dateText(offer.published_at || offer.created_at)}</span>` : ""}
         ${offer.expires_at ? `<span>截止 ${dateText(offer.expires_at)}</span>` : ""}
       </div>
       ${offer.matchReasons?.length ? `<div class="match-reasons">${offer.matchReasons.map((reason) => `<span>${escapeHtml(reason)}</span>`).join("")}</div>` : ""}
@@ -934,10 +957,10 @@ function renderBenefitDetail() {
       </div>
       <div class="benefit-notice">
         <strong>參加前請確認</strong>
-        <p>資格、地區限制、活動期限與實際獎勵以官方頁面為準。平台只整理公開資訊，不代替官方承諾。</p>
+        <p>資格、地區限制、活動期限與實際獎勵以活動主辦方公告為準。平台只整理公開資訊，不代替主辦方承諾。</p>
       </div>
       <div class="row-actions">
-        <a class="button primary" href="${escapeHtml(benefit.source_url)}" target="_blank" rel="noopener noreferrer">前往官方頁面</a>
+        <a class="button primary" href="${escapeHtml(benefit.source_url)}" target="_blank" rel="noopener noreferrer">查看活動來源</a>
         <a class="button secondary" href="#benefit-explore">返回福利探索</a>
       </div>
     </article>`;
@@ -946,7 +969,7 @@ function renderBenefitDetail() {
 function renderExpiredBenefits() {
   if (!els.expiredBenefitGrid) return;
   const expired = (state.catalogBenefits || [])
-    .filter((item) => item.status === "expired" || (item.expires_at && new Date(item.expires_at) <= new Date()))
+    .filter((item) => !item.is_automated && (item.status === "expired" || (item.expires_at && new Date(item.expires_at) <= new Date())))
     .sort((a, b) => new Date(b.expires_at || b.updated_at) - new Date(a.expires_at || a.updated_at))
     .slice(0, 40);
 
