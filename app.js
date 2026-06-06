@@ -245,7 +245,6 @@ function createShowcaseMembers() {
       connections: 12 + ((index * 11) % 48),
       completed_partnerships: 2 + ((index * 5) % 14),
       member_since: "2026-06-01",
-      provider_id: "showcase-02",
       created_at: "2026-06-01T00:00:00.000Z",
       is_showcase_member: true,
     };
@@ -560,7 +559,7 @@ function defaultBenefitOffers() {
       description: "適合重視交易成本與穩定撮合的用戶，接受媒合後可了解適合條件。",
       value: "降低交易成本、適合高頻交易",
       provider: "台灣交易資源 #218",
-      provider_id: "showcase-12",
+      provider_id: "showcase-02",
       created_at: "2026-06-01T00:00:00.000Z",
     },
     {
@@ -571,7 +570,7 @@ function defaultBenefitOffers() {
       description: "整理適合新手入門的開戶活動、任務回饋與基礎工具。",
       value: "低門檻、適合新手、站內媒合",
       provider: "台灣活動窗口 #407",
-      provider_id: "showcase-07",
+      provider_id: "showcase-12",
       created_at: "2026-06-01T00:00:00.000Z",
     },
     {
@@ -582,7 +581,7 @@ function defaultBenefitOffers() {
       description: "適合想系統化追蹤任務、工具測試與潛在空投機會的用戶。",
       value: "任務整理、工具入口、風險提示",
       provider: "Web3 任務資源 #613",
-      provider_id: "showcase-11",
+      provider_id: "showcase-07",
       created_at: "2026-06-01T00:00:00.000Z",
     },
     {
@@ -593,6 +592,7 @@ function defaultBenefitOffers() {
       description: "包含交易、資料、社群、內容與自動化工具的優惠與試用入口。",
       value: "工具折扣、試用入口、適合團隊",
       provider: "工具合作方 #529",
+      provider_id: "showcase-11",
       created_at: "2026-06-01T00:00:00.000Z",
     },
   ];
@@ -616,7 +616,10 @@ function getBenefitOffers() {
         source: "cloud",
       };
     });
-  return [...opportunityOffers, ...(state.localBenefitOffers || []), ...defaultBenefitOffers()];
+  const localOffers = (state.localBenefitOffers || [])
+    .filter((item) => item.status !== "cancelled")
+    .map((item) => ({ ...item, source: "local" }));
+  return [...opportunityOffers, ...localOffers, ...defaultBenefitOffers().map((item) => ({ ...item, source: "default" }))];
 }
 
 function currentBenefitNeed() {
@@ -635,28 +638,43 @@ function benefitScore(offer, need) {
   return Math.min(96, score);
 }
 
+function benefitRank(offer, need) {
+  const match = benefitScore(offer, need);
+  const createdAt = new Date(offer.created_at || 0).getTime();
+  const ageDays = Number.isFinite(createdAt) ? Math.max(0, (Date.now() - createdAt) / 86400000) : 365;
+  const recencyBoost = Math.max(0, 18 - Math.min(18, ageDays * 0.6));
+  const ownBoost = isOwnBenefit(offer) ? 24 : 0;
+  return match + recencyBoost + ownBoost;
+}
+
+function sortBenefitOffers(offers, need) {
+  return offers
+    .map((offer) => ({
+      ...offer,
+      score: benefitScore(offer, need),
+      rank: benefitRank(offer, need),
+    }))
+    .sort((a, b) => b.rank - a.rank || new Date(b.created_at || 0) - new Date(a.created_at || 0));
+}
+
 function renderBenefitMatches() {
   if (!els.benefitMatchGrid) return;
   const need = currentBenefitNeed();
-  const offers = getBenefitOffers()
-    .map((offer) => ({ ...offer, score: benefitScore(offer, need) }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 6);
+  const offers = sortBenefitOffers(getBenefitOffers(), need).slice(0, 6);
   els.benefitMatchGrid.innerHTML = offers.map(benefitCard).join("");
 }
 
 function renderBenefitExplore() {
   if (!els.benefitExploreGrid) return;
   const query = (els.benefitExploreSearch?.value || "").trim().toLowerCase();
-  const offers = getBenefitOffers()
+  const filteredOffers = getBenefitOffers()
     .filter((offer) => {
       const haystack = `${offer.title} ${offer.type} ${offer.audience} ${offer.description} ${offer.value} ${offer.provider}`.toLowerCase();
       const matchesQuery = !query || haystack.includes(query);
       const matchesFilter = activeBenefitFilter === "all" || offer.type === activeBenefitFilter || haystack.includes(activeBenefitFilter.toLowerCase());
       return matchesQuery && matchesFilter;
-    })
-    .map((offer) => ({ ...offer, score: benefitScore(offer, currentBenefitNeed()) }))
-    .slice(0, 12);
+    });
+  const offers = sortBenefitOffers(filteredOffers, currentBenefitNeed()).slice(0, 12);
 
   els.benefitExploreGrid.innerHTML = offers.length
     ? offers.map(benefitCard).join("")
@@ -665,20 +683,23 @@ function renderBenefitExplore() {
 
 function renderBenefitOffers() {
   if (!els.benefitOfferList) return;
-  const offers = getBenefitOffers().slice(0, 8);
-  els.benefitOfferList.innerHTML = offers.map((offer) => benefitCard({ ...offer, score: benefitScore(offer, currentBenefitNeed()) })).join("");
+  const offers = sortBenefitOffers(getBenefitOffers(), currentBenefitNeed()).slice(0, 8);
+  els.benefitOfferList.innerHTML = offers.map(benefitCard).join("");
 }
 
 function benefitCard(offer) {
   const provider = benefitProvider(offer);
+  const ownOffer = isOwnBenefit(offer);
   const profileButton = provider
     ? `<button class="button secondary" type="button" data-profile="${escapeHtml(provider.username)}">查看經營者</button>`
     : "";
-  const requestButton = provider?.is_showcase_member
-    ? `<button class="button primary" type="button" data-showcase-connect="${escapeHtml(provider.id)}">索取福利</button>`
-    : provider
-      ? `<button class="button primary" type="button" data-connect="${escapeHtml(provider.id)}">索取福利</button>`
-      : `<button class="button primary" type="button" data-benefit-lead="${escapeHtml(offer.id)}">索取福利</button>`;
+  const requestButton = ownOffer
+    ? `<button class="button ghost" type="button" data-cancel-benefit="${escapeHtml(offer.id)}">撤銷福利</button>`
+    : provider?.is_showcase_member
+      ? `<button class="button primary" type="button" data-showcase-connect="${escapeHtml(provider.id)}">索取福利</button>`
+      : provider
+        ? `<button class="button primary" type="button" data-connect="${escapeHtml(provider.id)}">索取福利</button>`
+        : `<button class="button primary" type="button" data-benefit-lead="${escapeHtml(offer.id)}">索取福利</button>`;
 
   return `
     <article class="benefit-card benefit-result">
@@ -703,6 +724,12 @@ function benefitCard(offer) {
 function benefitProvider(offer) {
   if (!offer?.provider_id) return null;
   return state.members.find((member) => member.id === offer.provider_id) || null;
+}
+
+function isOwnBenefit(offer) {
+  if (!currentUser || !offer) return false;
+  const ownerIds = [currentUser.id, currentProfile?.id].filter(Boolean);
+  return ownerIds.includes(offer.provider_id);
 }
 
 function fillBenefitNeedForm() {
@@ -1005,6 +1032,12 @@ async function handleDocumentClick(event) {
     return;
   }
 
+  const cancelBenefitButton = event.target.closest("[data-cancel-benefit]");
+  if (cancelBenefitButton) {
+    await cancelBenefit(cancelBenefitButton.dataset.cancelBenefit);
+    return;
+  }
+
   const cancelOppButton = event.target.closest("[data-cancel-opportunity]");
   if (cancelOppButton) await cancelOpportunity(cancelOppButton.dataset.cancelOpportunity);
 }
@@ -1132,6 +1165,33 @@ async function cancelOpportunity(id) {
   }
 
   showToast("需求已撤銷，可以再發布新的需求");
+  await refreshAll();
+}
+
+async function cancelBenefit(id) {
+  const localOffer = (state.localBenefitOffers || []).find((item) => item.id === id);
+  if (localOffer) {
+    if (!isOwnBenefit(localOffer) && !isAdmin()) return showToast("只能撤銷自己發布的福利");
+    localOffer.status = "cancelled";
+    saveDemoState();
+    showToast("福利已撤銷");
+    await refreshAll();
+    return;
+  }
+
+  const opportunity = state.opportunities.find((item) => item.id === id && item.title?.startsWith(BENEFIT_PREFIX));
+  if (!opportunity) return showToast("找不到這項福利");
+  if (opportunity.author_id !== currentUser?.id && !isAdmin()) return showToast("只能撤銷自己發布的福利");
+
+  if (supabaseClient) {
+    const { error } = await supabaseClient.from("opportunities").update({ status: "cancelled" }).eq("id", id);
+    if (error) return showToast("撤銷失敗，請稍後再試");
+  } else {
+    opportunity.status = "cancelled";
+    saveDemoState();
+  }
+
+  showToast("福利已撤銷");
   await refreshAll();
 }
 

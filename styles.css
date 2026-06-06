@@ -711,6 +711,15 @@ h2 {
   line-height: 1.7;
 }
 
+.benefit-card p,
+.member-card p,
+.opportunity-card p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
 input,
 select,
 textarea {
@@ -1197,15 +1206,25 @@ footer strong {
 
 @media (max-width: 980px) {
   .topbar {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
+    flex-direction: row;
+    gap: 12px;
+    min-height: 68px;
+    padding: 10px 16px;
   }
 
   nav {
-    width: 100%;
-    justify-content: flex-start;
-    overflow-x: auto;
-    padding-bottom: 4px;
+    top: calc(100% + 8px);
+    right: 12px;
+    width: min(340px, calc(100vw - 24px));
+    overflow: visible;
+    padding: 10px;
+  }
+
+  .menu-button {
+    flex: 0 0 46px;
+    width: 46px;
+    height: 46px;
   }
 
   .hero,
@@ -1240,12 +1259,45 @@ footer strong {
 }
 
 @media (max-width: 640px) {
-  main > section {
-    padding: 54px 16px;
+  .topbar {
+    min-height: 62px;
+    padding: 8px 12px;
   }
 
   .brand {
+    gap: 9px;
     min-width: 0;
+  }
+
+  .brand-mark {
+    width: 42px;
+    height: 42px;
+  }
+
+  .brand strong {
+    display: block;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+
+  .brand small {
+    font-size: 10px;
+  }
+
+  .menu-button {
+    flex-basis: 42px;
+    width: 42px;
+    height: 42px;
+  }
+
+  #logoutButton {
+    min-height: 42px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  main > section {
+    padding: 54px 16px;
   }
 
   h1 {
@@ -1276,5 +1328,55 @@ footer strong {
 
   .hero-actions .button {
     width: 100%;
+  }
+}
+
+@media (max-width: 980px) {
+  .topbar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 44px !important;
+    grid-template-rows: 52px !important;
+    align-items: center !important;
+    gap: 10px !important;
+    min-height: 68px !important;
+    height: 68px !important;
+    padding: 8px 14px !important;
+  }
+
+  .topbar .brand {
+    grid-column: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .topbar .brand > span:last-child {
+    min-width: 0;
+  }
+
+  .topbar .brand strong,
+  .topbar .brand small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topbar .menu-button {
+    grid-column: 2;
+    width: 44px;
+    height: 44px;
+    margin: 0;
+    justify-self: end;
+  }
+
+  .topbar nav {
+    position: fixed;
+    top: 76px;
+    right: 12px;
+  }
+
+  .topbar #logoutButton:not(.hidden) {
+    position: fixed;
+    right: 66px;
+    top: 13px;
   }
 }
