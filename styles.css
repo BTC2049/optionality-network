@@ -1379,4 +1379,97 @@ footer strong {
     right: 66px;
     top: 13px;
   }
+
+  main,
+  main > section,
+  .section-heading,
+  .audience-hero,
+  .benefit-workspace,
+  .benefit-workspace.single-form,
+  .benefit-match-grid,
+  .opportunity-layout,
+  .quick-start-grid,
+  .member-grid,
+  .match-grid,
+  .form-grid,
+  .admin-grid,
+  .inbox {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .benefit-workspace,
+  .benefit-workspace.single-form,
+  .benefit-match-grid,
+  .opportunity-layout,
+  .audience-hero,
+  .inbox {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .section-heading > *,
+  .benefit-workspace > *,
+  .opportunity-layout > *,
+  .member-card,
+  .benefit-card,
+  .post-card,
+  .signup-form,
+  .quick-card {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  input,
+  select,
+  textarea,
+  .button {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .quick-start-grid,
+  .member-grid,
+  .match-grid,
+  .benefit-grid,
+  .form-grid,
+  .admin-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .section-note {
+    max-width: 100%;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .post-card,
+  .signup-form,
+  .quick-card,
+  .member-card,
+  .benefit-card,
+  .opportunity-card {
+    padding: 16px;
+  }
+
+  .row-actions {
+    align-items: stretch;
+  }
+
+  .row-actions .button {
+    flex: 1 1 140px;
+  }
 }
