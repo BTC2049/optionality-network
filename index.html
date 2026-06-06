@@ -35,7 +35,7 @@
         }
       }
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260606-4" />
+    <link rel="stylesheet" href="./styles.css?v=20260606-5" />
   </head>
   <body>
     <header class="topbar">
@@ -78,14 +78,12 @@
             <a class="button primary" href="#quick-start">登入開始</a>
             <a class="button secondary" href="#members">先看會員</a>
           </div>
-          <form id="loginForm" class="quick-card home-login-card">
+          <div id="loginForm" class="quick-card home-login-card">
             <span>Login</span>
             <h3>登入後開始使用</h3>
-            <p id="loginCardCopy">用 Email 收登入連結，或直接使用 Google 登入。</p>
+            <p id="loginCardCopy">使用 Google 帳號快速登入。</p>
             <div id="loginControls" class="login-controls">
-              <input id="loginEmail" type="email" placeholder="name@email.com" required />
-              <button class="button primary wide" type="submit">寄送 Email 登入連結</button>
-              <button id="googleLoginButton" class="button secondary wide" type="button">使用 Google 登入</button>
+              <button id="googleLoginButton" class="button primary wide" type="button">使用 Google 登入</button>
             </div>
             <div id="loggedInActions" class="logged-in-actions hidden">
               <strong>你已登入</strong>
@@ -93,8 +91,8 @@
               <a class="button secondary wide" href="#profile">建立經營者頁</a>
             </div>
             <small id="authMessage">登入後即可開始媒合。</small>
-            <small class="privacy-note">Email 僅用於帳號與必要通知，不會公開。行銷訊息需另行同意。</small>
-          </form>
+            <small class="privacy-note">Google 帳號 Email 僅用於登入與必要通知，不會公開。</small>
+          </div>
           <div class="role-switch">
             <a class="role-card user-side" href="#benefits">
               <span>我是用戶</span>
@@ -288,14 +286,12 @@
           <p class="section-note">登入後即可發布需求與發送請求。</p>
         </div>
         <div class="quick-start-grid">
-          <form id="quickLoginForm" class="quick-card">
+          <article id="quickLoginForm" class="quick-card">
             <span>Step 1</span>
             <h3>登入開始</h3>
-            <p>用 Email 收登入連結，或直接用 Google 登入。</p>
+            <p>使用 Google 帳號快速登入。</p>
             <div class="login-controls">
-              <input type="email" placeholder="name@email.com" />
-              <button class="button primary wide" type="submit">寄送 Email 登入連結</button>
-              <button class="button secondary wide" type="button">使用 Google 登入</button>
+              <button class="button primary wide" type="button" data-google-login>使用 Google 登入</button>
             </div>
             <div class="logged-in-actions hidden">
               <strong>你已登入</strong>
@@ -303,7 +299,7 @@
               <a class="button secondary wide" href="#profile">補會員頁</a>
             </div>
             <small>登入後即可開始。</small>
-          </form>
+          </article>
           <article class="quick-card">
             <span>Step 2</span>
             <h3>先發布需求</h3>
@@ -578,6 +574,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./config.js"></script>
-    <script src="./app.js?v=20260606-4"></script>
+    <script src="./app.js?v=20260606-5"></script>
   </body>
 </html>

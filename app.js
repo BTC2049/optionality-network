@@ -275,7 +275,6 @@ function createShowcaseMembers() {
 const els = {
   logoutButton: document.querySelector("#logoutButton"),
   loginForm: document.querySelector("#loginForm"),
-  loginEmail: document.querySelector("#loginEmail"),
   loginControls: document.querySelector("#loginControls"),
   loggedInActions: document.querySelector("#loggedInActions"),
   loginCardCopy: document.querySelector("#loginCardCopy"),
@@ -349,7 +348,6 @@ function wireEvents() {
       renderBenefitExplore();
     });
   });
-  els.loginForm.addEventListener("submit", handleEmailLogin);
   els.googleLoginButton.addEventListener("click", handleGoogleLogin);
   els.logoutButton.addEventListener("click", handleLogout);
   els.menuButton?.addEventListener("click", toggleMenu);
@@ -413,7 +411,7 @@ function navigateTo(page) {
 }
 
 async function initCloudMode() {
-  els.authMessage.textContent = "你可以用 Email 登入連結，或直接使用 Google 登入。";
+  els.authMessage.textContent = "使用 Google 帳號登入後即可開始。";
   const { data } = await supabaseClient.auth.getSession();
   currentUser = data.session?.user || null;
   supabaseClient.auth.onAuthStateChange(async (_event, session) => {
@@ -503,7 +501,7 @@ function renderLoginState() {
   els.loggedInActions.classList.toggle("hidden", !loggedIn);
   els.loginCardCopy.textContent = loggedIn
     ? "你已經登入，可以直接發布需求、發送合作請求，或補完整會員頁。"
-    : "用 Email 收登入連結，或直接用 Google 登入。";
+    : "使用 Google 帳號快速登入。";
   if (loggedIn) {
     els.authMessage.textContent = currentProfile
       ? `目前登入：${currentUser.email || "已登入"}`
@@ -872,7 +870,7 @@ async function handleEmailLogin(event) {
 
 async function handleGoogleLogin() {
   if (!supabaseClient) {
-    showToast("目前請先使用 Email 登入");
+    showToast("Google 登入需要連接 Supabase");
     return;
   }
 
@@ -893,7 +891,7 @@ async function handleGoogleLogin() {
   if (error) {
     els.googleLoginButton.disabled = false;
     els.googleLoginButton.textContent = "使用 Google 登入";
-    showToast("Google 登入尚未開通，請先使用 Email 登入");
+    showToast("Google 登入失敗，請稍後再試");
   }
 }
 
@@ -945,7 +943,7 @@ async function handleProfileSave(event) {
 
 async function handleOpportunitySave(event) {
   event.preventDefault();
-  if (!currentUser) return askLoginFirst("先用 Email 登入，就能發布需求");
+  if (!currentUser) return askLoginFirst("先使用 Google 登入，就能發布需求");
 
   const opportunity = {
     title: value("#oppTitle"),
@@ -1003,6 +1001,12 @@ async function getActiveOpportunityCount() {
 }
 
 async function handleDocumentClick(event) {
+  const googleLoginButton = event.target.closest("[data-google-login]");
+  if (googleLoginButton) {
+    await handleGoogleLogin();
+    return;
+  }
+
   const navLink = event.target.closest("#mainNav a");
   if (navLink) closeMenu();
   else if (document.body.classList.contains("nav-open") && !event.target.closest("#mainNav") && !event.target.closest("#menuButton")) closeMenu();
@@ -1077,7 +1081,7 @@ function closeMenu() {
 }
 
 async function createRequest(receiverId) {
-  if (!currentUser) return askLoginFirst("先用 Email 登入，就能發送合作請求");
+  if (!currentUser) return askLoginFirst("先使用 Google 登入，就能發送合作請求");
   if (receiverId === currentUser.id) return showToast("這是你自己的會員頁");
 
   const receiver = state.members.find((member) => member.id === receiverId);
@@ -1097,7 +1101,7 @@ async function createRequest(receiverId) {
 }
 
 async function createShowcaseRequest(showcaseId) {
-  if (!currentUser) return askLoginFirst("先用 Email 登入，就能發送合作請求");
+  if (!currentUser) return askLoginFirst("先使用 Google 登入，就能發送合作請求");
 
   const showcaseMember = state.members.find((member) => member.id === showcaseId);
   const routeTarget = getShowcaseRouteTarget();
@@ -1161,7 +1165,7 @@ async function saveRequest(request) {
 }
 
 async function createOpportunityRequest(opportunityId) {
-  if (!currentUser) return askLoginFirst("先用 Email 登入，就能回覆這個需求");
+  if (!currentUser) return askLoginFirst("先使用 Google 登入，就能回覆這個需求");
   const opportunity = state.opportunities.find((item) => item.id === opportunityId);
   showToast(`已記錄你想合作：${opportunity?.title || "這個需求"}`);
 }
