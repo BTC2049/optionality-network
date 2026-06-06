@@ -35,7 +35,7 @@
         }
       }
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260606-6" />
+    <link rel="stylesheet" href="./styles.css?v=20260606-8" />
   </head>
   <body>
     <header class="topbar">
@@ -55,6 +55,7 @@
         <a href="#home" data-audience="all">首頁</a>
         <a href="#benefits" data-audience="user">福利首頁</a>
         <a href="#benefit-explore" data-audience="user">福利探索</a>
+        <a href="#benefit-expired" data-audience="user">過期活動</a>
         <a href="#benefit-search" data-audience="user">設定需求</a>
         <a href="#benefit-results" data-audience="user">福利配對</a>
         <a href="#benefit-offers" data-audience="user">提供福利</a>
@@ -222,9 +223,26 @@
             <button class="filter benefit-filter" type="button" data-benefit-filter="新戶福利">新戶福利</button>
             <button class="filter benefit-filter" type="button" data-benefit-filter="空投任務">空投任務</button>
             <button class="filter benefit-filter" type="button" data-benefit-filter="工具折扣">工具折扣</button>
+            <button class="filter benefit-filter" type="button" data-benefit-filter="理財收益">理財收益</button>
+            <button class="filter benefit-filter" type="button" data-benefit-filter="活動福利">活動福利</button>
           </div>
         </div>
         <div id="benefitExploreGrid" class="benefit-match-grid"></div>
+      </section>
+
+      <section id="benefit-detail" class="benefits-section">
+        <div id="benefitDetailView" class="benefit-detail-view"></div>
+      </section>
+
+      <section id="benefit-expired" class="benefits-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Expired Benefits</p>
+            <h2>過期活動</h2>
+          </div>
+          <p class="section-note">已結束的活動會自動移到這裡，不再出現在福利探索與配對中。</p>
+        </div>
+        <div id="expiredBenefitGrid" class="benefit-match-grid"></div>
       </section>
 
       <section id="benefit-search" class="benefits-section">
@@ -273,7 +291,7 @@
             <p class="eyebrow">Benefit Match</p>
             <h2>適合你的福利配對</h2>
           </div>
-          <p class="section-note">依照你的需求排序推薦。</p>
+          <p class="section-note">綜合需求、使用情境、期限與來源可信度排序。</p>
         </div>
         <div id="benefitMatchGridMain" class="benefit-match-grid"></div>
       </section>
@@ -348,7 +366,7 @@
             <p class="eyebrow">Smart Matching</p>
             <h2>更適合你的合作人選</h2>
           </div>
-          <p class="section-note">依照你的資源與需求推薦合作人選。</p>
+          <p class="section-note">分析雙向資源、地區、語言、角色互補與合作紀錄。</p>
         </div>
         <div class="unlock-flow" aria-label="配對後解鎖流程">
           <span>智能配對</span>
@@ -575,6 +593,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./config.js"></script>
-    <script src="./app.js?v=20260606-5"></script>
+    <script src="./app.js?v=20260606-8"></script>
   </body>
 </html>

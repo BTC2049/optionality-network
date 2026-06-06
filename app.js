@@ -13,7 +13,7 @@ const supabaseClient = hasSupabaseConfig
   : null;
 
 const adminEmails = config.adminEmails || [];
-const pageIds = ["home", "benefits", "benefit-explore", "benefit-search", "benefit-results", "benefit-offers", "quick-start", "members", "matches", "opportunities", "requests", "profile", "admin"];
+const pageIds = ["home", "benefits", "benefit-explore", "benefit-detail", "benefit-expired", "benefit-search", "benefit-results", "benefit-offers", "quick-start", "members", "matches", "opportunities", "requests", "profile", "admin"];
 const BENEFIT_PREFIX = "福利｜";
 const PUBLIC_PROFILE_COLUMNS = [
   "id",
@@ -131,6 +131,7 @@ state.messages ||= [];
 state.signupLeads ||= [];
 state.benefitNeeds ||= {};
 state.localBenefitOffers ||= [];
+state.catalogBenefits ||= [];
 state.members = mergeDisplayMembers(state.members);
 let currentUser = null;
 let currentProfile = null;
@@ -290,6 +291,8 @@ const els = {
   benefitMatchGrid: document.querySelector("#benefit-results #benefitMatchGridMain"),
   benefitExploreSearch: document.querySelector("#benefitExploreSearch"),
   benefitExploreGrid: document.querySelector("#benefitExploreGrid"),
+  benefitDetailView: document.querySelector("#benefitDetailView"),
+  expiredBenefitGrid: document.querySelector("#expiredBenefitGrid"),
   benefitOfferForm: document.querySelector("#benefitOfferForm"),
   benefitOfferList: document.querySelector("#benefitOfferList"),
   requestInbox: document.querySelector("#requestInbox"),
@@ -400,7 +403,7 @@ function renderRoute() {
 
 function getPageAudience(page) {
   if (page === "home") return "home";
-  if (["benefits", "benefit-explore", "benefit-search", "benefit-results", "benefit-offers"].includes(page)) return "user";
+  if (["benefits", "benefit-explore", "benefit-detail", "benefit-expired", "benefit-search", "benefit-results", "benefit-offers"].includes(page)) return "user";
   return "operator";
 }
 
@@ -484,6 +487,8 @@ function renderApp() {
   fillBenefitNeedForm();
   renderBenefitMatches();
   renderBenefitExplore();
+  renderBenefitDetail();
+  renderExpiredBenefits();
   renderBenefitOffers();
   renderMembers();
   renderMatches();
@@ -523,7 +528,7 @@ function updateAdminVisibility() {
 async function loadCloudData() {
   if (!supabaseClient) return;
 
-  const [{ data: members }, { data: opportunities }, { data: requests }, { data: messages }, { data: signupLeads }] = await Promise.all([
+  const [{ data: members }, { data: opportunities }, { data: requests }, { data: messages }, { data: signupLeads }, { data: catalogBenefits }] = await Promise.all([
     supabaseClient.from("profiles").select(PUBLIC_PROFILE_COLUMNS).order("created_at", { ascending: false }),
     supabaseClient.from("opportunities").select("*").order("created_at", { ascending: false }),
     currentUser
@@ -542,6 +547,11 @@ async function loadCloudData() {
     isAdmin()
       ? supabaseClient.from("signup_leads").select("*").order("signed_up_at", { ascending: false })
       : Promise.resolve({ data: [] }),
+    supabaseClient
+      .from("benefit_catalog")
+      .select("*")
+      .order("published_at", { ascending: false, nullsFirst: false })
+      .limit(200),
   ]);
 
   state.members = mergeDisplayMembers(members || []);
@@ -549,6 +559,7 @@ async function loadCloudData() {
   state.requests = requests || [];
   state.messages = messages || [];
   state.signupLeads = signupLeads || [];
+  state.catalogBenefits = catalogBenefits || [];
 }
 
 function mergeDisplayMembers(realMembers) {
@@ -626,6 +637,24 @@ function defaultBenefitOffers() {
 }
 
 function getBenefitOffers() {
+  const catalogOffers = (state.catalogBenefits || [])
+    .filter((item) => item.status === "active" && (!item.expires_at || new Date(item.expires_at) > new Date()))
+    .map((item) => ({
+    id: item.id,
+    title: item.title,
+    type: item.category,
+    audience: item.audience,
+    description: item.summary,
+    value: item.value_text,
+    provider: item.source_name,
+    source_url: item.source_url,
+    image_url: item.image_url,
+    published_at: item.published_at,
+    expires_at: item.expires_at,
+    created_at: item.published_at || item.created_at,
+    source: "catalog",
+    is_automated: item.is_automated,
+    }));
   const opportunityOffers = (state.opportunities || [])
     .filter((item) => item.status !== "cancelled" && item.title?.startsWith(BENEFIT_PREFIX))
     .map((item) => {
@@ -646,7 +675,7 @@ function getBenefitOffers() {
   const localOffers = (state.localBenefitOffers || [])
     .filter((item) => item.status !== "cancelled")
     .map((item) => ({ ...item, source: "local" }));
-  return [...opportunityOffers, ...localOffers, ...defaultBenefitOffers().map((item) => ({ ...item, source: "default" }))];
+  return [...catalogOffers, ...opportunityOffers, ...localOffers, ...defaultBenefitOffers().map((item) => ({ ...item, source: "default" }))];
 }
 
 function currentBenefitNeed() {
@@ -657,12 +686,111 @@ function currentBenefitNeed() {
   };
 }
 
+const benefitTypeRelations = [
+  ["最低手續費", "交易工具", "交易活動", "合約交易"],
+  ["新戶活動", "任務獎勵", "入門教學", "新手福利"],
+  ["空投機會", "項目活動", "鏈上任務", "白名單"],
+  ["工具優惠", "AI 工具", "數據工具", "交易工具"],
+  ["社群福利", "會員活動", "社群活動", "學習資源"],
+];
+
+function normalizeMatchText(value = "") {
+  return String(value).toLowerCase().replace(/\s+/g, "").replace(/[，。、「」：:／/_-]/g, "");
+}
+
+function sameBenefitGroup(left, right) {
+  const a = normalizeMatchText(left);
+  const b = normalizeMatchText(right);
+  return benefitTypeRelations.some((group) => group.some((item) => a.includes(normalizeMatchText(item))) && group.some((item) => b.includes(normalizeMatchText(item))));
+}
+
+function intentTerms(value = "") {
+  const dictionary = ["新手", "低手續費", "合約", "現貨", "空投", "任務", "工具", "AI", "社群", "台灣", "高頻", "小額", "交易", "學習", "安全", "獎勵"];
+  const text = normalizeMatchText(value);
+  return dictionary.filter((term) => text.includes(normalizeMatchText(term)));
+}
+
+function daysSince(value) {
+  const time = new Date(value || 0).getTime();
+  return Number.isFinite(time) ? Math.max(0, (Date.now() - time) / 86400000) : 365;
+}
+
+function daysUntil(value) {
+  const time = new Date(value || 0).getTime();
+  return Number.isFinite(time) ? (time - Date.now()) / 86400000 : null;
+}
+
+function analyzeBenefitMatch(offer, need) {
+  if (offer.expires_at && new Date(offer.expires_at) <= new Date()) return { score: 0, reasons: ["活動已結束"] };
+
+  let score = 8;
+  const reasons = [];
+  const offerText = `${offer.title} ${offer.type} ${offer.audience} ${offer.description} ${offer.value}`;
+
+  if (normalizeMatchText(offer.type) === normalizeMatchText(need.type)) {
+    score += 38;
+    reasons.push("福利類型完全符合");
+  } else if (sameBenefitGroup(offer.type, need.type)) {
+    score += 20;
+    reasons.push("福利類型高度相關");
+  }
+
+  if (normalizeMatchText(offer.audience) === normalizeMatchText(need.audience)) {
+    score += 20;
+    reasons.push(`適合${need.audience}`);
+  } else if (sameBenefitGroup(offer.audience, need.audience) || normalizeMatchText(offerText).includes(normalizeMatchText(need.audience))) {
+    score += 10;
+    reasons.push("使用情境相近");
+  }
+
+  const needTerms = intentTerms(`${need.type} ${need.audience} ${need.volume}`);
+  const matchedTerms = needTerms.filter((term) => normalizeMatchText(offerText).includes(normalizeMatchText(term)));
+  if (matchedTerms.length) {
+    score += Math.min(14, matchedTerms.length * 4);
+    reasons.push(`符合：${matchedTerms.slice(0, 2).join("、")}`);
+  }
+
+  if (need.volume) {
+    const isTradeNeed = /交易|合約|現貨|usdt|\bu\b|手續費/i.test(need.volume);
+    const isTradeOffer = /交易|合約|現貨|usdt|手續費|費率/i.test(offerText);
+    if (isTradeNeed && isTradeOffer) {
+      score += 10;
+      reasons.push("交易條件相符");
+    } else if (!isTradeNeed && normalizeMatchText(offerText).includes(normalizeMatchText(need.volume))) {
+      score += 7;
+      reasons.push("需求描述相符");
+    }
+  }
+
+  const age = daysSince(offer.published_at || offer.created_at);
+  if (age <= 3) {
+    score += 8;
+    reasons.push("近期新增");
+  } else if (age <= 14) {
+    score += 5;
+    reasons.push("近期更新");
+  } else if (age <= 30) {
+    score += 2;
+  }
+
+  if (offer.source === "catalog" && offer.source_url) {
+    score += 6;
+    reasons.push("可查驗官方來源");
+  } else if (offer.provider_id || offer.provider) {
+    score += 3;
+  }
+
+  const remaining = daysUntil(offer.expires_at);
+  if (remaining !== null && remaining >= 0 && remaining <= 7) {
+    score += 4;
+    reasons.push(`剩 ${Math.max(1, Math.ceil(remaining))} 天截止`);
+  }
+
+  return { score: Math.min(98, Math.max(8, Math.round(score))), reasons: reasons.slice(0, 4) };
+}
+
 function benefitScore(offer, need) {
-  let score = 50;
-  if (offer.type === need.type) score += 28;
-  if (offer.audience === need.audience) score += 18;
-  if (need.volume && /合約|交易|USDT|u/i.test(need.volume) && /交易|手續費|活動/.test(`${offer.type}${offer.description}`)) score += 8;
-  return Math.min(96, score);
+  return analyzeBenefitMatch(offer, need).score;
 }
 
 function benefitRank(offer, need) {
@@ -676,11 +804,15 @@ function benefitRank(offer, need) {
 
 function sortBenefitOffers(offers, need) {
   return offers
-    .map((offer) => ({
-      ...offer,
-      score: benefitScore(offer, need),
-      rank: benefitRank(offer, need),
-    }))
+    .map((offer) => {
+      const analysis = analyzeBenefitMatch(offer, need);
+      return {
+        ...offer,
+        score: analysis.score,
+        matchReasons: analysis.reasons,
+        rank: benefitRank(offer, need),
+      };
+    })
     .sort((a, b) => b.rank - a.rank || new Date(b.created_at || 0) - new Date(a.created_at || 0));
 }
 
@@ -722,7 +854,9 @@ function benefitCard(offer) {
     : "";
   const requestButton = ownOffer
     ? `<button class="button ghost" type="button" data-cancel-benefit="${escapeHtml(offer.id)}">撤銷福利</button>`
-    : provider?.is_showcase_member
+    : offer.source === "catalog"
+      ? `<button class="button primary" type="button" data-benefit-detail="${escapeHtml(offer.id)}">索取福利</button>`
+      : provider?.is_showcase_member
       ? `<button class="button primary" type="button" data-showcase-connect="${escapeHtml(provider.id)}">索取福利</button>`
       : provider
         ? `<button class="button primary" type="button" data-connect="${escapeHtml(provider.id)}">索取福利</button>`
@@ -740,7 +874,10 @@ function benefitCard(offer) {
         <span>${escapeHtml(offer.audience)}</span>
         <span>${escapeHtml(offer.value)}</span>
         <span>${escapeHtml(offer.provider || "平台經營者")}</span>
+        ${offer.source === "catalog" ? `<span>官方來源 · ${dateText(offer.published_at || offer.created_at)}</span>` : ""}
+        ${offer.expires_at ? `<span>截止 ${dateText(offer.expires_at)}</span>` : ""}
       </div>
+      ${offer.matchReasons?.length ? `<div class="match-reasons">${offer.matchReasons.map((reason) => `<span>${escapeHtml(reason)}</span>`).join("")}</div>` : ""}
       <div class="row-actions">
         ${profileButton}
         ${requestButton}
@@ -751,6 +888,90 @@ function benefitCard(offer) {
 function benefitProvider(offer) {
   if (!offer?.provider_id) return null;
   return state.members.find((member) => member.id === offer.provider_id) || null;
+}
+
+function openBenefitDetail(id) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("benefit", id);
+  url.hash = "benefit-detail";
+  window.history.pushState({}, "", url);
+  renderBenefitDetail();
+  navigateTo("benefit-detail");
+}
+
+function renderBenefitDetail() {
+  if (!els.benefitDetailView) return;
+  const id = new URLSearchParams(window.location.search).get("benefit");
+  const benefit = getBenefitOffers().find((item) => item.id === id && item.source === "catalog");
+
+  if (!benefit) {
+    els.benefitDetailView.innerHTML = `
+      <article class="benefit-detail-card">
+        <p class="eyebrow">Benefit Detail</p>
+        <h2>找不到這項福利</h2>
+        <p>這項福利可能已過期或撤下，請回到福利探索查看最新內容。</p>
+        <a class="button primary" href="#benefit-explore">返回福利探索</a>
+      </article>`;
+    return;
+  }
+
+  els.benefitDetailView.innerHTML = `
+    <article class="benefit-detail-card">
+      <div class="benefit-detail-header">
+        <div>
+          <p class="eyebrow">${escapeHtml(benefit.provider)}</p>
+          <h2>${escapeHtml(benefit.title)}</h2>
+        </div>
+        <span class="status new">${escapeHtml(benefit.type)}</span>
+      </div>
+      ${benefit.image_url ? `<img class="benefit-detail-image" src="${escapeHtml(benefit.image_url)}" alt="${escapeHtml(benefit.title)}" loading="lazy" />` : ""}
+      <p class="benefit-detail-summary">${escapeHtml(benefit.description)}</p>
+      <div class="benefit-facts">
+        <div><small>適合對象</small><strong>${escapeHtml(benefit.audience)}</strong></div>
+        <div><small>主要價值</small><strong>${escapeHtml(benefit.value)}</strong></div>
+        <div><small>更新時間</small><strong>${dateText(benefit.published_at || benefit.created_at)}</strong></div>
+        ${benefit.expires_at ? `<div><small>活動期限</small><strong>${dateText(benefit.expires_at)}</strong></div>` : ""}
+      </div>
+      <div class="benefit-notice">
+        <strong>參加前請確認</strong>
+        <p>資格、地區限制、活動期限與實際獎勵以官方頁面為準。平台只整理公開資訊，不代替官方承諾。</p>
+      </div>
+      <div class="row-actions">
+        <a class="button primary" href="${escapeHtml(benefit.source_url)}" target="_blank" rel="noopener noreferrer">前往官方頁面</a>
+        <a class="button secondary" href="#benefit-explore">返回福利探索</a>
+      </div>
+    </article>`;
+}
+
+function renderExpiredBenefits() {
+  if (!els.expiredBenefitGrid) return;
+  const expired = (state.catalogBenefits || [])
+    .filter((item) => item.status === "expired" || (item.expires_at && new Date(item.expires_at) <= new Date()))
+    .sort((a, b) => new Date(b.expires_at || b.updated_at) - new Date(a.expires_at || a.updated_at))
+    .slice(0, 40);
+
+  els.expiredBenefitGrid.innerHTML = expired.length
+    ? expired
+        .map(
+          (item) => `
+            <article class="benefit-card benefit-result expired-benefit">
+              <div class="benefit-card-head">
+                <span>${escapeHtml(item.category)}</span>
+                <strong>已結束</strong>
+              </div>
+              <h3>${escapeHtml(item.title)}</h3>
+              <p>${escapeHtml(item.summary)}</p>
+              <div class="member-meta">
+                <span>${escapeHtml(item.source_name)}</span>
+                <span>截止 ${dateText(item.expires_at)}</span>
+              </div>
+              <div class="row-actions">
+                <a class="button secondary" href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener noreferrer">查看原活動</a>
+              </div>
+            </article>`
+        )
+        .join("")
+    : '<article class="benefit-card"><h3>目前沒有過期活動</h3><p>結束的福利會自動移到這裡保存。</p></article>';
 }
 
 function isOwnBenefit(offer) {
@@ -1001,6 +1222,12 @@ async function getActiveOpportunityCount() {
 }
 
 async function handleDocumentClick(event) {
+  const benefitDetailButton = event.target.closest("[data-benefit-detail]");
+  if (benefitDetailButton) {
+    openBenefitDetail(benefitDetailButton.dataset.benefitDetail);
+    return;
+  }
+
   const googleLoginButton = event.target.closest("[data-google-login]");
   if (googleLoginButton) {
     await handleGoogleLogin();
@@ -1291,25 +1518,135 @@ function renderMatches() {
     : '<article class="member-card"><h3>還沒有足夠資料配對</h3><p>先補上你的會員頁，系統就能依照你的資源與需求推薦人選。</p></article>';
 }
 
-function getRecommendedMembers() {
-  const myHave = new Set(currentProfile?.resources_have || []);
-  const myNeed = new Set(currentProfile?.resources_need || []);
+const memberResourceGroups = [
+  ["KOL 推廣", "KOL 人脈", "Twitter/X 受眾", "YouTube 頻道", "媒體曝光", "媒體網絡"],
+  ["Telegram 社群", "Discord 社群", "交易社群", "社群經理", "社群主"],
+  ["交易所合作", "交易所資源", "交易所 BD", "Exchange BD", "聯盟推廣夥伴"],
+  ["項目合作", "項目資源", "VC 人脈", "募資", "投資人"],
+  ["AI 自動化", "開發者", "Web3 工具", "客服支援", "數據分析"],
+  ["影片剪輯", "平面設計", "SEO", "搜尋引擎優化", "翻譯"],
+];
 
+function relatedResource(left, right) {
+  const a = normalizeMatchText(left);
+  const b = normalizeMatchText(right);
+  if (!a || !b) return false;
+  if (a === b || a.includes(b) || b.includes(a)) return true;
+  return memberResourceGroups.some((group) => group.some((item) => a.includes(normalizeMatchText(item))) && group.some((item) => b.includes(normalizeMatchText(item))));
+}
+
+function resourceMatches(targets, supplies) {
+  const exact = [];
+  const related = [];
+  targets.forEach((target) => {
+    const exactSupply = supplies.find((supply) => normalizeMatchText(supply) === normalizeMatchText(target));
+    if (exactSupply) exact.push(target);
+    else if (supplies.some((supply) => relatedResource(target, supply))) related.push(target);
+  });
+  return { exact, related };
+}
+
+function languageOverlap(left = [], right = []) {
+  return left.filter((language) => right.some((other) => relatedResource(language, other)));
+}
+
+function complementaryRoles(left = "", right = "") {
+  const pairs = [
+    ["項目方", "KOL"], ["項目方", "媒體"], ["交易所", "社群"], ["交易所", "聯盟"],
+    ["BD", "KOL"], ["BD", "社群"], ["創辦人", "開發者"], ["創辦人", "設計"],
+    ["社群", "分析師"], ["媒體", "項目"],
+  ];
+  return pairs.some(([a, b]) => (left.includes(a) && right.includes(b)) || (left.includes(b) && right.includes(a)));
+}
+
+function profileCompleteness(member) {
+  const fields = [
+    member.title,
+    member.country,
+    member.bio,
+    member.languages?.length,
+    member.resources_have?.length,
+    member.resources_need?.length,
+  ];
+  return fields.filter(Boolean).length / fields.length;
+}
+
+function analyzeMemberMatch(member) {
+  const myHave = currentProfile?.resources_have || [];
+  const myNeed = currentProfile?.resources_need || [];
+  const theyHave = member.resources_have || [];
+  const theyNeed = member.resources_need || [];
+  const needFit = resourceMatches(myNeed, theyHave);
+  const giveFit = resourceMatches(theyNeed, myHave);
+  const reasons = [];
+  let percent = currentProfile ? 12 : 18;
+
+  if (needFit.exact.length) {
+    percent += Math.min(32, needFit.exact.length * 16);
+    reasons.push(`能提供：${needFit.exact.slice(0, 2).join("、")}`);
+  }
+  if (needFit.related.length) {
+    percent += Math.min(14, needFit.related.length * 7);
+    reasons.push(`資源相關：${needFit.related.slice(0, 2).join("、")}`);
+  }
+  if (giveFit.exact.length) {
+    percent += Math.min(24, giveFit.exact.length * 12);
+    reasons.push(`正在找：${giveFit.exact.slice(0, 2).join("、")}`);
+  }
+  if (giveFit.related.length) {
+    percent += Math.min(10, giveFit.related.length * 5);
+    reasons.push("雙方資源可互補");
+  }
+
+  if (currentProfile?.country && member.country && normalizeMatchText(currentProfile.country) === normalizeMatchText(member.country)) {
+    percent += 8;
+    reasons.push("同地區合作");
+  }
+
+  const sharedLanguages = languageOverlap(currentProfile?.languages || [], member.languages || []);
+  if (sharedLanguages.length) {
+    percent += Math.min(8, sharedLanguages.length * 4);
+    reasons.push(`共同語言：${sharedLanguages.slice(0, 2).join("、")}`);
+  }
+
+  if (complementaryRoles(currentProfile?.title || "", member.title || "")) {
+    percent += 6;
+    reasons.push("角色互補");
+  }
+
+  const completeness = profileCompleteness(member);
+  if (completeness >= 0.8) {
+    percent += 5;
+    reasons.push("合作資料完整");
+  } else if (completeness >= 0.5) {
+    percent += 2;
+  }
+
+  const reputation = (member.connections || 0) + (member.completed_partnerships || 0) * 3;
+  if (reputation > 0) {
+    percent += Math.min(8, Math.round(Math.log2(reputation + 1) * 2));
+    if ((member.completed_partnerships || 0) >= 3) reasons.push("具合作紀錄");
+  }
+
+  const recentDays = daysSince(member.created_at || member.member_since);
+  if (recentDays <= 30) percent += 3;
+  if (currentProfile && !needFit.exact.length && !needFit.related.length && !giveFit.exact.length && !giveFit.related.length) percent -= 10;
+
+  const tieBreaker = Math.abs(hashText(`${member.id}${currentProfile?.id || ""}`)) % 7;
+  const displayPercent = Math.min(97, Math.max(18, Math.round(percent)));
+  const realProfilePriority = member.is_showcase_member ? 0 : 18;
+  return {
+    member,
+    percent: displayPercent,
+    score: displayPercent + realProfilePriority + tieBreaker / 10,
+    reasons: reasons.slice(0, 4),
+  };
+}
+
+function getRecommendedMembers() {
   return state.members
     .filter((member) => member.id !== currentUser?.id)
-    .map((member) => {
-      const theyHave = member.resources_have || [];
-      const theyNeed = member.resources_need || [];
-      const needMatches = theyHave.filter((item) => myNeed.has(item));
-      const giveMatches = theyNeed.filter((item) => myHave.has(item));
-      const keywordScore = currentProfile ? needMatches.length * 18 + giveMatches.length * 12 : 0;
-      const activityScore = Math.min(18, Math.round(((member.connections || 0) + (member.completed_partnerships || 0) * 2) / 8));
-      const realPriority = member.is_showcase_member ? 0 : 1000;
-      const score = realPriority + keywordScore + activityScore;
-      const percent = Math.min(96, Math.max(68, 68 + keywordScore + activityScore + (member.is_showcase_member ? 0 : 6)));
-      const reasons = [...needMatches, ...giveMatches].slice(0, 3);
-      return { member, score, percent, reasons };
-    })
+    .map(analyzeMemberMatch)
     .sort((a, b) => b.score - a.score || b.percent - a.percent);
 }
 
@@ -1357,7 +1694,7 @@ function hashText(text = "") {
 
 function matchCard(match) {
   const { member, percent, reasons } = match;
-  const reasonText = reasons.length ? reasons.join("、") : `${member.resources_have?.slice(0, 2).join("、") || "資源互補"}`;
+  const confidence = percent >= 82 ? "高度契合" : percent >= 62 ? "值得認識" : percent >= 42 ? "可能互補" : "探索人選";
   return `
     <article class="member-card match-result">
       <div class="member-top">
@@ -1366,9 +1703,9 @@ function matchCard(match) {
           <h3>${escapeHtml(publicMemberLabel(member))}</h3>
           <small>${escapeHtml(member.title)} · ${escapeHtml(member.country)}</small>
         </div>
-        <strong class="match-score">${percent}%</strong>
+        <strong class="match-score">${percent}% · ${confidence}</strong>
       </div>
-      <p>推薦原因：${escapeHtml(reasonText)}</p>
+      ${reasons.length ? `<div class="match-reasons">${reasons.map((reason) => `<span>${escapeHtml(reason)}</span>`).join("")}</div>` : "<p>補充更多資源與需求後，系統會提供更精準的推薦依據。</p>"}
       <div class="tag-list">${tags(member.resources_have)}</div>
       <div class="row-actions">
         <button class="button secondary" type="button" data-profile="${escapeHtml(member.username)}">查看頁面</button>

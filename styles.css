@@ -691,6 +691,15 @@ h2 {
   gap: 12px;
 }
 
+.expired-benefit {
+  opacity: 0.76;
+}
+
+.expired-benefit .benefit-card-head strong {
+  color: #8ca0b8;
+  font-size: 15px;
+}
+
 .benefit-card-head {
   display: flex;
   align-items: center;
@@ -701,6 +710,73 @@ h2 {
 .benefit-card-head strong {
   color: var(--green);
   font-size: 22px;
+}
+
+.benefit-detail-view {
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.benefit-detail-card {
+  display: grid;
+  gap: 22px;
+  padding: clamp(22px, 4vw, 38px);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.benefit-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.benefit-detail-header h2 {
+  max-width: 720px;
+  font-size: clamp(28px, 4vw, 42px);
+}
+
+.benefit-detail-image {
+  width: 100%;
+  max-height: 420px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.benefit-detail-summary {
+  color: #c5d4e7;
+  font-size: 18px;
+  line-height: 1.8;
+}
+
+.benefit-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.benefit-facts div,
+.benefit-notice {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(6, 12, 23, 0.52);
+}
+
+.benefit-facts small {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+}
+
+.benefit-notice p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.7;
 }
 
 .compact-heading {
@@ -870,6 +946,26 @@ label {
   background: rgba(53, 240, 192, 0.08);
   font-size: 14px;
   white-space: nowrap;
+}
+
+.match-result .member-top {
+  flex-wrap: wrap;
+}
+
+.match-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.match-reasons span {
+  padding: 6px 9px;
+  border: 1px solid rgba(74, 163, 255, 0.28);
+  border-radius: 999px;
+  color: #b8d8ff;
+  background: rgba(74, 163, 255, 0.08);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .member-top {
@@ -1475,6 +1571,7 @@ footer strong {
   .benefit-workspace,
   .benefit-workspace.single-form,
   .benefit-match-grid,
+  .benefit-facts,
   .opportunity-layout,
   .quick-start-grid,
   .member-grid,
@@ -1489,6 +1586,7 @@ footer strong {
   .benefit-workspace,
   .benefit-workspace.single-form,
   .benefit-match-grid,
+  .benefit-facts,
   .opportunity-layout,
   .audience-hero,
   .inbox {
@@ -1500,6 +1598,10 @@ footer strong {
     flex-direction: column;
     gap: 8px;
     margin-bottom: 20px;
+  }
+
+  .benefit-detail-header {
+    flex-direction: column;
   }
 
   .section-heading > *,
