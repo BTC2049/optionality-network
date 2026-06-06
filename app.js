@@ -15,6 +15,26 @@ const supabaseClient = hasSupabaseConfig
 const adminEmails = config.adminEmails || [];
 const pageIds = ["home", "benefits", "benefit-explore", "benefit-search", "benefit-results", "benefit-offers", "quick-start", "members", "matches", "opportunities", "requests", "profile", "admin"];
 const BENEFIT_PREFIX = "福利｜";
+const PUBLIC_PROFILE_COLUMNS = [
+  "id",
+  "username",
+  "full_name",
+  "title",
+  "country",
+  "languages",
+  "bio",
+  "telegram",
+  "twitter",
+  "website",
+  "resources_have",
+  "resources_need",
+  "profile_views",
+  "connections",
+  "completed_partnerships",
+  "member_since",
+  "created_at",
+  "updated_at",
+].join(",");
 
 const seed = {
   members: [
@@ -108,6 +128,7 @@ state.members ||= [];
 state.opportunities ||= [];
 state.requests ||= [];
 state.messages ||= [];
+state.signupLeads ||= [];
 state.benefitNeeds ||= {};
 state.localBenefitOffers ||= [];
 state.members = mergeDisplayMembers(state.members);
@@ -283,6 +304,9 @@ const els = {
   messageInput: document.querySelector("#messageInput"),
   adminNavLink: document.querySelector("#adminNavLink"),
   adminSection: document.querySelector("#admin"),
+  leadList: document.querySelector("#leadList"),
+  leadCount: document.querySelector("#leadCount"),
+  downloadLeadsButton: document.querySelector("#downloadLeadsButton"),
   menuButton: document.querySelector("#menuButton"),
   profileView: document.querySelector("#profileView"),
   profileLink: document.querySelector("#profileLink"),
@@ -329,6 +353,7 @@ function wireEvents() {
   els.googleLoginButton.addEventListener("click", handleGoogleLogin);
   els.logoutButton.addEventListener("click", handleLogout);
   els.menuButton?.addEventListener("click", toggleMenu);
+  els.downloadLeadsButton?.addEventListener("click", downloadSignupLeads);
   els.profileForm.addEventListener("submit", handleProfileSave);
   els.opportunityForm.addEventListener("submit", handleOpportunitySave);
   els.benefitNeedForm?.addEventListener("submit", handleBenefitNeedSave);
@@ -500,8 +525,8 @@ function updateAdminVisibility() {
 async function loadCloudData() {
   if (!supabaseClient) return;
 
-  const [{ data: members }, { data: opportunities }, { data: requests }, { data: messages }] = await Promise.all([
-    supabaseClient.from("profiles").select("*").order("created_at", { ascending: false }),
+  const [{ data: members }, { data: opportunities }, { data: requests }, { data: messages }, { data: signupLeads }] = await Promise.all([
+    supabaseClient.from("profiles").select(PUBLIC_PROFILE_COLUMNS).order("created_at", { ascending: false }),
     supabaseClient.from("opportunities").select("*").order("created_at", { ascending: false }),
     currentUser
       ? supabaseClient
@@ -516,12 +541,16 @@ async function loadCloudData() {
           .select("*, sender:sender_id(username, full_name)")
           .order("created_at", { ascending: true })
       : Promise.resolve({ data: [] }),
+    isAdmin()
+      ? supabaseClient.from("signup_leads").select("*").order("signed_up_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
   ]);
 
   state.members = mergeDisplayMembers(members || []);
   state.opportunities = opportunities || [];
   state.requests = requests || [];
   state.messages = messages || [];
+  state.signupLeads = signupLeads || [];
 }
 
 function mergeDisplayMembers(realMembers) {
@@ -1582,6 +1611,63 @@ function renderAdmin() {
   document.querySelector("#statOpps").textContent = state.opportunities.length;
   document.querySelector("#statRequests").textContent = state.requests.length;
   document.querySelector("#statActiveOpps").textContent = state.opportunities.filter((item) => item.status !== "cancelled").length;
+  renderSignupLeads();
+}
+
+function renderSignupLeads() {
+  if (!els.leadList || !els.leadCount) return;
+  const leads = state.signupLeads || [];
+  els.leadCount.textContent = leads.length;
+  els.leadList.innerHTML = leads.length
+    ? leads
+        .slice(0, 100)
+        .map(
+          (lead) => `
+            <div class="admin-item">
+              <div class="lead-meta">
+                <strong>${escapeHtml(lead.email)}</strong>
+                <small>${escapeHtml(providerLabel(lead.provider))} · 註冊 ${dateText(lead.signed_up_at)}</small>
+              </div>
+              <small>最近登入 ${lead.last_sign_in_at ? dateText(lead.last_sign_in_at) : "尚無紀錄"}</small>
+            </div>`
+        )
+        .join("")
+    : '<div class="admin-item"><div class="lead-meta"><strong>尚無登入名單</strong><small>執行 lead-capture.sql 後，既有帳號也會自動匯入。</small></div></div>';
+}
+
+function providerLabel(provider) {
+  if (provider === "google") return "Google";
+  if (provider === "email") return "Email";
+  return provider || "Email";
+}
+
+function downloadSignupLeads() {
+  if (!isAdmin()) return showToast("只有管理員可以下載名單");
+  const leads = state.signupLeads || [];
+  if (!leads.length) return showToast("目前沒有可下載的名單");
+
+  const rows = [
+    ["Email", "登入方式", "註冊時間", "最近登入"],
+    ...leads.map((lead) => [
+      lead.email,
+      providerLabel(lead.provider),
+      lead.signed_up_at || "",
+      lead.last_sign_in_at || "",
+    ]),
+  ];
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `optionality-signup-leads-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast("名單 CSV 已下載");
+}
+
+function csvCell(value) {
+  return `"${String(value ?? "").replaceAll('"', '""')}"`;
 }
 
 function fillProfileForm(profile) {

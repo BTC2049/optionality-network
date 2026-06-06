@@ -35,7 +35,7 @@
         }
       }
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260606-3" />
+    <link rel="stylesheet" href="./styles.css?v=20260606-4" />
   </head>
   <body>
     <header class="topbar">
@@ -93,6 +93,7 @@
               <a class="button secondary wide" href="#profile">建立經營者頁</a>
             </div>
             <small id="authMessage">登入後即可開始媒合。</small>
+            <small class="privacy-note">Email 僅用於帳號與必要通知，不會公開。行銷訊息需另行同意。</small>
           </form>
           <div class="role-switch">
             <a class="role-card user-side" href="#benefits">
@@ -522,6 +523,19 @@
           <article><strong id="statRequests">0</strong><span>合作請求</span></article>
           <article><strong id="statActiveOpps">0</strong><span>有效需求</span></article>
         </div>
+        <div class="admin-workspace">
+          <article>
+            <div class="admin-list-heading">
+              <div>
+                <p class="eyebrow">Signup Leads</p>
+                <h3>登入名單 <span id="leadCount">0</span></h3>
+              </div>
+              <button id="downloadLeadsButton" class="button secondary" type="button">下載 CSV</button>
+            </div>
+            <p class="section-note">只限管理員查看。包含登入 Email、登入方式與註冊時間。</p>
+            <div id="leadList" class="admin-list"></div>
+          </article>
+        </div>
       </section>
     </main>
 
@@ -564,6 +578,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./config.js"></script>
-    <script src="./app.js"></script>
+    <script src="./app.js?v=20260606-4"></script>
   </body>
 </html>

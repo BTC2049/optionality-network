@@ -697,6 +697,12 @@ h2 {
   font-size: 18px;
 }
 
+.privacy-note {
+  color: #7890aa;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .quick-card span {
   color: var(--green);
   font-size: 13px;
@@ -1017,6 +1023,22 @@ label {
   gap: 10px;
 }
 
+.admin-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.admin-list-heading h3 {
+  margin: 4px 0 0;
+}
+
+.admin-list-heading h3 span {
+  color: var(--green);
+}
+
 .admin-item {
   display: flex;
   align-items: center;
@@ -1037,6 +1059,20 @@ label {
   background: rgba(6, 12, 23, 0.72);
   cursor: pointer;
   font-weight: 900;
+}
+
+.lead-meta {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.lead-meta strong {
+  overflow-wrap: anywhere;
+}
+
+.lead-meta small {
+  color: var(--muted);
 }
 
 .empty-text {
@@ -1471,5 +1507,15 @@ footer strong {
 
   .row-actions .button {
     flex: 1 1 140px;
+  }
+
+  .admin-list-heading,
+  .admin-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-list-heading .button {
+    width: 100%;
   }
 }
