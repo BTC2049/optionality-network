@@ -35,7 +35,7 @@
         }
       }
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260606-10" />
+    <link rel="stylesheet" href="./styles.css?v=20260610-1" />
   </head>
   <body>
     <header class="topbar">
@@ -542,6 +542,16 @@
           <article>
             <div class="admin-list-heading">
               <div>
+                <p class="eyebrow">Benefit Review</p>
+                <h3>福利待審核 <span id="benefitReviewCount">0</span></h3>
+              </div>
+            </div>
+            <p class="section-note">只有完成繁中整理並確認台灣用戶可參加的活動才能公開。</p>
+            <div id="benefitReviewList" class="admin-list"></div>
+          </article>
+          <article>
+            <div class="admin-list-heading">
+              <div>
                 <p class="eyebrow">Signup Leads</p>
                 <h3>登入名單 <span id="leadCount">0</span></h3>
               </div>
@@ -593,6 +603,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./config.js"></script>
-    <script src="./app.js?v=20260606-10"></script>
+    <script src="./app.js?v=20260610-1"></script>
   </body>
 </html>

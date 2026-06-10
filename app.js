@@ -308,6 +308,8 @@ const els = {
   adminSection: document.querySelector("#admin"),
   leadList: document.querySelector("#leadList"),
   leadCount: document.querySelector("#leadCount"),
+  benefitReviewList: document.querySelector("#benefitReviewList"),
+  benefitReviewCount: document.querySelector("#benefitReviewCount"),
   downloadLeadsButton: document.querySelector("#downloadLeadsButton"),
   menuButton: document.querySelector("#menuButton"),
   profileView: document.querySelector("#profileView"),
@@ -638,7 +640,11 @@ function defaultBenefitOffers() {
 
 function getBenefitOffers() {
   const catalogOffers = (state.catalogBenefits || [])
-    .filter((item) => !item.is_automated && item.status === "active" && (!item.expires_at || new Date(item.expires_at) > new Date()))
+    .filter((item) =>
+      item.status === "active" &&
+      (!item.is_automated || (item.eligibility_status === "eligible" && ["zh", "translated"].includes(item.language_status))) &&
+      (!item.expires_at || new Date(item.expires_at) > new Date())
+    )
     .map((item) => ({
     id: item.id,
     title: item.title,
@@ -969,7 +975,10 @@ function renderBenefitDetail() {
 function renderExpiredBenefits() {
   if (!els.expiredBenefitGrid) return;
   const expired = (state.catalogBenefits || [])
-    .filter((item) => !item.is_automated && (item.status === "expired" || (item.expires_at && new Date(item.expires_at) <= new Date())))
+    .filter((item) =>
+      (item.status === "expired" || (item.expires_at && new Date(item.expires_at) <= new Date())) &&
+      (!item.is_automated || (item.eligibility_status === "eligible" && ["zh", "translated"].includes(item.language_status)))
+    )
     .sort((a, b) => new Date(b.expires_at || b.updated_at) - new Date(a.expires_at || a.updated_at))
     .slice(0, 40);
 
@@ -1248,6 +1257,12 @@ async function handleDocumentClick(event) {
   const benefitDetailButton = event.target.closest("[data-benefit-detail]");
   if (benefitDetailButton) {
     openBenefitDetail(benefitDetailButton.dataset.benefitDetail);
+    return;
+  }
+
+  const benefitReviewButton = event.target.closest("[data-benefit-review]");
+  if (benefitReviewButton) {
+    await reviewBenefit(benefitReviewButton.dataset.benefitReview, benefitReviewButton.dataset.reviewAction);
     return;
   }
 
@@ -1976,6 +1991,49 @@ function renderAdmin() {
   document.querySelector("#statRequests").textContent = state.requests.length;
   document.querySelector("#statActiveOpps").textContent = state.opportunities.filter((item) => item.status !== "cancelled").length;
   renderSignupLeads();
+  renderBenefitReview();
+}
+
+function renderBenefitReview() {
+  if (!els.benefitReviewList || !els.benefitReviewCount) return;
+  const items = (state.catalogBenefits || []).filter((item) => item.status === "review");
+  els.benefitReviewCount.textContent = items.length;
+  els.benefitReviewList.innerHTML = items.length
+    ? items.slice(0, 100).map((item) => `
+        <div class="admin-item benefit-review-item">
+          <div class="lead-meta">
+            <strong>${escapeHtml(item.title)}</strong>
+            <small>${escapeHtml(item.source_name)} · ${escapeHtml(item.eligibility_note || "台灣資格待確認")}</small>
+            <small>語言：${item.language_status === "translated" ? "已翻譯" : item.language_status === "zh" ? "繁體中文" : "待翻譯"}</small>
+          </div>
+          <div class="row-actions">
+            <a class="button secondary" href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener noreferrer">查看來源</a>
+            <button class="button primary" type="button" data-benefit-review="${item.id}" data-review-action="approve">確認台灣可參加</button>
+            <button class="button ghost" type="button" data-benefit-review="${item.id}" data-review-action="reject">撤下</button>
+          </div>
+        </div>`).join("")
+    : '<div class="admin-item"><div class="lead-meta"><strong>目前沒有待審福利</strong><small>新抓取但資格不明的活動會出現在這裡。</small></div></div>';
+}
+
+async function reviewBenefit(id, action) {
+  if (!isAdmin() || !supabaseClient) return showToast("只有管理員可以審核福利");
+  const item = (state.catalogBenefits || []).find((benefit) => benefit.id === id);
+  if (action === "approve" && item?.language_status === "review") {
+    return showToast("這筆活動尚未完成繁體中文翻譯，不能公開");
+  }
+  const updates = action === "approve"
+    ? {
+        status: "active",
+        eligibility_status: "eligible",
+        eligibility_regions: ["TW"],
+        eligibility_note: "管理員已確認台灣用戶可參加",
+        updated_at: new Date().toISOString(),
+      }
+    : { status: "cancelled", updated_at: new Date().toISOString() };
+  const { error } = await supabaseClient.from("benefit_catalog").update(updates).eq("id", id);
+  if (error) return showToast("福利審核更新失敗");
+  showToast(action === "approve" ? "已核准並公開福利" : "已撤下福利");
+  await refreshAll();
 }
 
 function renderSignupLeads() {
