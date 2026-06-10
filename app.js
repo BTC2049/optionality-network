@@ -653,7 +653,7 @@ function getBenefitOffers() {
     description: item.summary,
     value: item.value_text,
     provider: item.source_name,
-    source_url: item.source_url,
+    source_url: benefitOutboundUrl(item),
     image_url: item.image_url,
     published_at: item.published_at,
     expires_at: item.expires_at,
@@ -682,6 +682,25 @@ function getBenefitOffers() {
     .filter((item) => item.status !== "cancelled")
     .map((item) => ({ ...item, source: "local" }));
   return [...catalogOffers, ...opportunityOffers, ...localOffers, ...defaultBenefitOffers().map((item) => ({ ...item, source: "default" }))];
+}
+
+const BITUNIX_REGISTRATION_URL = "https://www.bitunix.com/register?vipCode=bitunixzh";
+
+function benefitOutboundUrl(item = {}) {
+  const sourceName = String(item.source_name || item.provider || "").toLowerCase();
+  const sourceUrl = String(item.source_url || "");
+  if (sourceName.includes("bitunix") || /(^|\.)bitunix\.com$/i.test(safeHostname(sourceUrl))) {
+    return BITUNIX_REGISTRATION_URL;
+  }
+  return sourceUrl;
+}
+
+function safeHostname(url) {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return "";
+  }
 }
 
 function currentBenefitNeed() {
@@ -966,7 +985,7 @@ function renderBenefitDetail() {
         <p>資格、地區限制、活動期限與實際獎勵以活動主辦方公告為準。平台只整理公開資訊，不代替主辦方承諾。</p>
       </div>
       <div class="row-actions">
-        <a class="button primary" href="${escapeHtml(benefit.source_url)}" target="_blank" rel="noopener noreferrer">查看活動來源</a>
+        <a class="button primary" href="${escapeHtml(benefitOutboundUrl(benefit))}" target="_blank" rel="noopener noreferrer">查看活動來源</a>
         <a class="button secondary" href="#benefit-explore">返回福利探索</a>
       </div>
     </article>`;
@@ -998,7 +1017,7 @@ function renderExpiredBenefits() {
                 <span>截止 ${dateText(item.expires_at)}</span>
               </div>
               <div class="row-actions">
-                <a class="button secondary" href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener noreferrer">查看原活動</a>
+                <a class="button secondary" href="${escapeHtml(benefitOutboundUrl(item))}" target="_blank" rel="noopener noreferrer">查看原活動</a>
               </div>
             </article>`
         )
@@ -2007,7 +2026,7 @@ function renderBenefitReview() {
             <small>語言：${item.language_status === "translated" ? "已翻譯" : item.language_status === "zh" ? "繁體中文" : "待翻譯"}</small>
           </div>
           <div class="row-actions">
-            <a class="button secondary" href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener noreferrer">查看來源</a>
+            <a class="button secondary" href="${escapeHtml(benefitOutboundUrl(item))}" target="_blank" rel="noopener noreferrer">查看來源</a>
             <button class="button primary" type="button" data-benefit-review="${item.id}" data-review-action="approve">確認台灣可參加</button>
             <button class="button ghost" type="button" data-benefit-review="${item.id}" data-review-action="reject">撤下</button>
           </div>
