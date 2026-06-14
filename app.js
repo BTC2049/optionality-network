@@ -1197,8 +1197,45 @@ async function handleProfileSave(event) {
   if (!profile.resources_have.length || !profile.resources_need.length) return showToast("請至少各選一個「我有」和「我需要」");
 
   if (supabaseClient) {
-    const { error } = await supabaseClient.from("profiles").upsert(profile, { onConflict: "id" });
-    if (error) return showToast("會員頁儲存失敗，請確認 Username 沒有重複");
+    const { data: duplicateProfile, error: duplicateError } = await supabaseClient
+      .from("profiles")
+      .select("id")
+      .eq("username", profile.username)
+      .neq("id", currentUser.id)
+      .maybeSingle();
+
+    if (duplicateError) {
+      console.error("Username check failed", duplicateError);
+      return showToast("暫時無法檢查 Username，請稍後再試");
+    }
+    if (duplicateProfile) return showToast("這個 Username 已被其他會員使用");
+
+    const { data: existingProfile, error: existingError } = await supabaseClient
+      .from("profiles")
+      .select("id")
+      .eq("id", currentUser.id)
+      .maybeSingle();
+
+    if (existingError) {
+      console.error("Profile lookup failed", existingError);
+      return showToast("無法讀取你的會員頁，請重新登入後再試");
+    }
+
+    const payload = { ...profile, updated_at: new Date().toISOString() };
+    let saveResult;
+    if (existingProfile) {
+      const { id, ...updates } = payload;
+      saveResult = await supabaseClient.from("profiles").update(updates).eq("id", id);
+    } else {
+      saveResult = await supabaseClient.from("profiles").insert(payload);
+    }
+
+    if (saveResult.error) {
+      console.error("Profile save failed", saveResult.error);
+      if (saveResult.error.code === "23505") return showToast("這個 Username 已被其他會員使用");
+      if (saveResult.error.code === "42501") return showToast("會員頁權限尚未設定完成，請重新登入後再試");
+      return showToast(`會員頁儲存失敗：${saveResult.error.message || "請稍後再試"}`);
+    }
   } else {
     const index = state.members.findIndex((member) => member.id === profile.id);
     const demoProfile = { ...profile, profile_views: 0, connections: 0, completed_partnerships: 0 };
