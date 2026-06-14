@@ -392,7 +392,7 @@ function renderRoute() {
     section.setAttribute("aria-hidden", shouldShow ? "false" : "true");
   });
 
-  document.querySelectorAll(".topbar nav a").forEach((link) => {
+  document.querySelectorAll(".topbar nav a, .topbar .primary-nav a").forEach((link) => {
     const linkAudience = link.dataset.audience || "all";
     const shouldShow = audience === "home" || linkAudience === "all" || linkAudience === audience;
     link.classList.toggle("audience-hidden", !shouldShow);
